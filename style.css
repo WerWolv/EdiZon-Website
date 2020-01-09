@@ -1,0 +1,291 @@
+.logo {
+    width: 50px;
+}
+
+.hamburger-menu {
+    position: absolute;
+    right: 0px;
+    width: 50px;
+    height: 50px;
+    cursor: pointer;
+}
+
+h2 {
+    color:lightgray;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    text-align: center;
+}
+
+h3 {
+    color:lightgray;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    text-align: center;
+}
+
+h4 {
+    color:lightgray;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    text-align: center;
+}
+
+.footer{
+    color:lightgray;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    text-align: center;
+}
+
+a {
+    color: lightgray;
+}
+
+a img {
+    outline : none;
+    border : 0;
+}
+
+ul {
+    font-size: 20px;
+    color: lightgray;
+    list-style-type: none;
+    width: 80%;
+    padding: 5px 0 10px 80px;
+    text-align: left;
+}
+ul li {
+    margin: 0;
+    padding: 0;
+}
+ul li::before {
+    content: '•';
+    margin-right: 20px;
+}
+
+
+.text {
+    color:darkgray;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    width: 100%;
+    text-align: center;
+    margin-left: 0%;
+    margin-right: 0%
+}
+
+html {
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+}
+
+body {
+    background: #5d4f4e;
+    margin: 0;
+    padding: 0;
+    text-align:center;
+    font-family:"Lato",Sans-serif;
+}
+
+.download {
+    position: relative;
+    margin-left: 50%;
+    margin-top: 80px;
+    transform : translate(-50% ,-50%);
+}
+
+.btn:link, .btn:visited {
+    text-decoration: none;
+    text-transform:uppercase;
+    position:relative;
+    top:0;
+    left:0;
+    padding:20px 40px;
+    border-radius:100px;
+    display:inline-block;
+    transition: all .5s;
+}
+
+.btn-white {
+    background:#fff;
+    color:#000;
+}
+
+.btn:hover {
+    box-shadow:0px 10px 10px rgba(0,0,0,0.2);
+}
+
+.btn:active {
+    box-shadow:0px 5px 10px rgba(0,0,0,0.2);
+    transform:translateY(-1px);
+}
+
+.btn-bottom-animation-1 {
+    animation:comeFromBottom 1s ease-out .8s;
+}
+
+.btn::after {
+    content:"";
+    text-decoration: none;
+    text-transform:uppercase;
+    position:absolute;
+    width:100%;
+    height:100%;
+    top:0;
+    left:0;
+    border-radius:100px;
+    display:inline-block;
+    z-index:-1;
+    transition: all .5s;
+}
+
+.btn-white::after {
+    background: #fff;
+}
+
+.btn-animation-1:hover::after {
+    transform: scaleX(1.4) scaleY(1.6);
+    opacity: 0;
+}
+
+@keyframes comeFromBottom {
+    0% {
+        opacity:0;
+        transform:translateY(40px);
+    } 
+    100% {
+        opacity:1;
+        transform:translateY(0);
+    }
+}
+
+.image-slide-background {
+    position: absolute;
+    background-color: #332b2b;
+    width: 100%;
+    height: 400px;
+    z-index: -1;
+    top: 0px;
+}
+
+.box-shad {
+    background-color: #332b2b;
+    -webkit-box-shadow: inset 0 0 8px #000;
+    -moz-box-shadow: inset 0 0 8px #000;
+    box-shadow: inset 0 0 8px #000;
+}
+
+.top-bottom-shadow {
+    box-shadow: inset  0  8px 8px -8px #000000, 
+                inset  0 -8px 8px -8px #000000;
+    width: 100%;
+    height: 400px;
+    margin: auto 0;
+    position: absolute;
+    top: 0px;
+}
+
+.bottom-shadow {
+    box-shadow: inset 0  8px 8px -8px #000000;
+}
+
+.sidebar {
+    position: relative;
+    overflow: hidden;
+    float: right;
+    box-shadow: inset 8px 0 8px -8px #000000;
+    background-color: #332b2b;
+    height: 455px;
+    width: 0px;
+}
+
+.sidebar-open {
+    width: 300px;
+    font-size: 20px;
+}
+
+  /* Position the image container (needed to position the left and right arrows) */
+  .container {
+    position: relative;
+    height: 400px;
+  }
+  
+  /* Hide the images by default */
+  .slide-image {
+    position: absolute;
+    margin-left: auto;
+    margin-right: auto;
+    left: 0;
+    right: 0;
+    opacity: 0;
+  }
+  
+  /* Next & previous buttons */
+  .prev,
+  .next {
+    cursor: pointer;
+    position: relative;
+    width: auto;
+    padding: 16px;
+    color: gray;
+    font-weight: bold;
+    font-size: 20px;
+    border-radius: 0 3px 3px 0;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  
+  /* Position the "next button" to the right */
+  .next {
+    border-radius: 3px 0 0 3px;
+    top: 180px;
+    right: -311px;
+  }
+
+  .prev {
+    top: 180px;
+    right: 311px;
+  }
+  
+  /* On hover, add a black background color with a little bit see-through */
+  .prev:hover,
+  .next:hover {
+    background-color: rgba(0, 0, 0, 0.8);
+  }
+
+.opacity1 {
+    opacity: 1;
+}
+
+.ease-transform-short {
+    -webkit-transition: all 0.2s ease;  
+    -moz-transition: all 0.2s ease;  
+    -o-transition: all 0.2s ease;  
+    -ms-transition: all 0.2s ease;  
+    transition: all 0.2s ease;
+}
+
+.ease-transform-long {
+    -webkit-transition: all 0.5s ease;  
+    -moz-transition: all 0.5s ease;  
+    -o-transition: all 0.5s ease;  
+    -ms-transition: all 0.5s ease;  
+    transition: all 0.5s ease;
+}
+
+.card {
+    position: relative;
+    width: 350px;
+    height: 180px;
+
+    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.5), 0 6px 20px 0 rgba(0, 0, 0, 0.5);
+    text-align: center;
+    background-color: white;
+    border-radius: 5px;
+    float: left;
+    display: block;
+    margin: 15px;
+    transition: transform 0.2s;
+    cursor: pointer;
+}
+
+.card:hover {
+    transform: scale(1.05); /* (150% zoom - Note: if the zoom is too large, it will go outside of the viewport) */
+}
