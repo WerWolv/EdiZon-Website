@@ -149,7 +149,7 @@ body {
 }
 
 .box-shad {
-    background-color: #332b2b;
+    background-color: transparent;
     -webkit-box-shadow: inset 0 0 8px #000;
     -moz-box-shadow: inset 0 0 8px #000;
     box-shadow: inset 0 0 8px #000;
