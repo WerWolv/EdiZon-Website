@@ -259,6 +259,14 @@ body {
     transition: transform 0.2s;
 }
 
+.modal-xl{
+    height: 90vh;
+}
+
+.modal-content{
+    height: 100%;
+}
+
 .card:hover {
     transform: scale(1.05); /* (150% zoom - Note: if the zoom is too large, it will go outside of the viewport) */
 }
