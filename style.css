@@ -254,19 +254,9 @@ body {
 }
 
 .card {
-    position: relative;
-    width: 350px;
-    height: 180px;
-
     box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.5), 0 6px 20px 0 rgba(0, 0, 0, 0.5);
-    text-align: center;
-    background-color: white;
-    border-radius: 5px;
-    float: left;
-    display: block;
     margin: 15px;
-    transition: transform 0.2s;
-    cursor: pointer;
+
 }
 
 .card:hover {

@@ -83,10 +83,10 @@
           </div>
         </ul>
 
-        
+
       </div>
     </div>
-    
+
   </nav>
 
 
@@ -99,35 +99,76 @@
         <div class="navbar-nav">
         </div>
     </nav>
-      <div class="row flex-column justify-content-center vw-100 my-1">
-        <div class="">
-          <img style="width:150px" src="./resources/icon.jpg" alt="logo">
-        </div>
-        <div class="navbar-text">
-          <h2 class='text-wrap'>A save management, editing tool and memory trainer Homebrew for the Nintendo Switch</h2>
-        </div>
-        <div class="" style="margin-top: 20px">
-          <a href="https://github.com/WerWolv/EdiZon-Rewrite/releases/latest/download/EdiZon.nro"
-            class="btn btn-white btn-animation-1">Download</a>
+    <div class="row flex-column justify-content-center vw-100 my-1">
+      <div class="">
+        <img style="width:150px" src="./resources/icon.jpg" alt="logo">
+      </div>
+      <div class="navbar-text">
+        <h2 class='text-wrap'>A save management, editing tool and memory trainer Homebrew for the Nintendo Switch</h2>
+      </div>
+      <div class="" style="margin-top: 20px">
+        <a href="https://github.com/WerWolv/EdiZon-Rewrite/releases/latest/download/EdiZon.nro"
+          class="btn btn-white btn-animation-1">Download</a>
 
-          <div class="text" style="margin: 20px 0 20px 0">
-            Get the (possibly unstable) snapshot release <a
-              href="https://github.com/WerWolv/EdiZon-Rewrite/releases/download/snapshot/EdiZon.nro">here</a>.
-          </div>
+        <div class="text" style="margin: 20px 0 20px 0">
+          Get the (possibly unstable) snapshot release <a
+            href="https://github.com/WerWolv/EdiZon-Rewrite/releases/download/snapshot/EdiZon.nro">here</a>.
         </div>
       </div>
+    </div>
 
-    
+
 
     <div class="row justify-content-center my-5 vw-100">
 
       <h2 class='col-12 px-0'>Features</h2>
+
+      <!-- Modal -->
+      <div class="modal fade" id="cardone" tabindex="-1" role="dialog" aria-labelledby="cardoneLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="cardoneLabel">Save file management</h5>
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+            <div class="modal-body">
+              <p>Create save data backups for any game on your Nintendo Switch without depending on Nintendo Online</p>
+              <p>Restore yours and your friends save files at any time</p>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <div class='card col-md-4 col-12' style="height: 220px; min-width: 450px">
         <div class='card-body'>
           <h5 class="card-title">Save file management</h5>
           <p>Create save data backups for any game on your Nintendo Switch without depending on Nintendo Online</p>
           <p>Restore yours and your friends save files at any time</p>
+        </div>
+        <a class="stretched-link" data-toggle="modal" data-target="#cardone"></a>
+        
+      </div>
+
+
+      <!-- Modal -->
+      <div class="modal fade" id="cardtwo" tabindex="-1" role="dialog" aria-labelledby="cardtwoLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="cardtwoLabel">Save file repositories</h5>
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+            <div class="modal-body">
+              <p>Access a variaty of different save file repositories or host your own</p>
+              <p>Official repositories for 100% save files, Mario Maker 2 stages and more</p>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -137,6 +178,28 @@
           <p>Access a variaty of different save file repositories or host your own</p>
           <p>Official repositories for 100% save files, Mario Maker 2 stages and more</p>
         </div>
+        <a class="stretched-link" data-toggle="modal" data-target="#cardtwo"></a>
+
+      </div>
+
+
+      <!-- Modal -->
+      <div class="modal fade" id="cardthree" tabindex="-1" role="dialog" aria-labelledby="cardthreeLabel"
+      aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="cardthreeLabel">Save file editing</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <p>Edit save files of supported games using a easy-to-use interface</p>
+            <p>Create your own save editors with the Lua and Python API</p>
+          </div>
+        </div>
+      </div>
       </div>
 
       <div class='card col-md-4 col-12' style="height: 220px; min-width: 450px">
@@ -144,6 +207,29 @@
           <h5 class="card-title">Save file editing</h5>
           <p>Edit save files of supported games using a easy-to-use interface</p>
           <p>Create your own save editors with the Lua and Python API</p>
+        </div>
+        <a class="stretched-link" data-toggle="modal" data-target="#cardthree"></a>
+
+      </div>
+
+
+
+      <!-- Modal -->
+      <div class="modal fade" id="cardfour" tabindex="-1" role="dialog" aria-labelledby="cardfourLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="cardfourLabel">Cheats and on-the-fly memory editing</h5>
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+            <div class="modal-body">
+              <p>Toggle, load and download Cheats without the need of a computer</p>
+              <p>Edit any game's memory with the built-in Cheat Engine</p>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -153,8 +239,8 @@
           <p>Toggle, load and download Cheats without the need of a computer</p>
           <p>Edit any game's memory with the built-in Cheat Engine</p>
         </div>
+        <a class="stretched-link" data-toggle="modal" data-target="#cardfour"></a>
       </div>
-
     </div>
 
 
