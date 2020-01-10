@@ -28,7 +28,7 @@ h4 {
     text-align: center;
 }
 
-.footer{
+.footer {
     color:lightgray;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     text-align: center;
@@ -36,6 +36,10 @@ h4 {
 
 a {
     color: lightgray;
+}
+
+a:hover {
+    color: darkgray;
 }
 
 a img {
@@ -259,16 +263,29 @@ body {
 }
 
 .card {
+    -webkit-animation: fadein 1s; /* Safari, Chrome and Opera > 12.1 */
+    -moz-animation: fadein 1s; /* Firefox < 16 */
+     -ms-animation: fadein 1s; /* Internet Explorer */
+      -o-animation: fadein 1s; /* Opera < 12.1 */
+         animation: fadein 1s;
+    
     box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.5), 0 6px 20px 0 rgba(0, 0, 0, 0.5);
     margin: 15px;
     transition: transform 0.2s;
 }
 
+@keyframes fadein {
+    from { opacity: 0; transform: translate(0, -30px); }
+    to   { opacity: 1; transform: translate(0, 0px);  }
+}
+
 .modal-xl{
     height: 90vh;
+    width: 100%;
 }
 
 .modal-content{
+    width: 100%;
     height: 100%;
 }
 
@@ -287,6 +304,7 @@ body {
     transition: all 0.3s;
     overflow-y: scroll;
     box-shadow: 3px 3px 3px rgba(0, 0, 0, 0.2);
+    outline: none;
 }
 
 #sidebar.active {
@@ -326,10 +344,6 @@ body {
 .overlay.active {
     visibility: visible;
     background: rgba(0, 0, 0, 0.7);
-}
-
-#sidebar {
-    outline: none;
 }
 
 #sidebar .sidebar-header {
