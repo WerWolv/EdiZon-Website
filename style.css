@@ -442,3 +442,8 @@ ul.CTAs a {
     border: solid 3px transparent;
     border-radius: 10px;
 }
+
+.code-textbox {
+    font-family: monospace;
+    background-color: whitesmoke;
+}

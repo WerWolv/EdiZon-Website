@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+	<meta http-equiv="Content-Type" content="text/html;charset=utf-8" >
+	<style type="text/css">
+		html,
+		body {
+			width: 100%;
+			height: 100%;
+			margin: 0;
+			padding: 0;
+			overflow: hidden;
+		}
+	</style>
+</head>
+<body>
+<div id="container" style="width:100%;height:100%"></div>
+<script src="monaco/loader.js"></script>
+<script>
+	require.config({ paths: { 'vs': 'monaco' }});
+
+	require(['vs/editor/editor.main'], function() {
+
+		monaco.languages.register({
+			id: 'cheat'
+		});
+		monaco.languages.setMonarchTokensProvider('cheat', {
+			tokenizer: {
+				root: [
+					[/\[[a-zA-Z 0-9:_!?.,&|()"'+\-*/]{1,64}\]/, "cheat-title"],
+                    [/(\b(| |\n)[0-9a-zA-Z]{8}(| |\n)\b)/, "cheat-opcode"],
+                    [/./, "error"],
+				],
+			}
+		});
+
+		// Define a new theme that constains only rules that match this language
+		monaco.editor.defineTheme('cheat-highlighting', {
+			base: 'vs-dark',
+			inherit: false,
+			rules: [
+				{ token: 'cheat-title', foreground: '808080' },
+				{ token: 'error', foreground: 'ff0000', fontStyle: 'bold' },
+				{ token: 'cheat-opcode', foreground: 'FFA500' }
+			]
+		});
+		
+		var editor = monaco.editor.create(document.getElementById('container'), {
+			theme: 'cheat-highlighting',
+			value: getCode(),
+			language: 'cheat',
+             minimap: {
+                enabled: false
+            }
+		});
+
+        monaco.languages.registerHoverProvider('cheat', {
+            provideHover: function (model, position) {
+                const hoveredWord = model.getWordAtPosition(position);
+                return {
+                    contents: [
+                        { value: '**SOURCE**' },
+                        { value: 'hoveredWord: ' + hoveredWord.word }
+                    ]
+                }
+            }
+        });
+	});
+
+    function getType(code) {
+        
+    }
+
+    function parseCode(code) {
+
+    }
+
+	function getCode() {
+		return [
+            '[60 FPS]',
+            '58000000 018A6210',
+            '78000000 0000243C',
+            '64000000 00000000 42700000',
+            ' ',
+            '[30 FPS]',
+            '58000000 018A6210',
+            '78000000 0000243C',
+            '64000000 00000000 41F00000',
+		].join('\n');;
+	}
+</script>
+</body>
+</html>
