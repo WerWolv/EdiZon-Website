@@ -538,3 +538,13 @@ pre {
     margin: 0;
     padding: 0;
 }
+
+[data-emoji] {
+    font-style: normal;
+    font-weight: normal;
+  }
+  
+[data-emoji]:before {
+    content: attr(data-emoji);
+    margin-right: .125em;
+  }

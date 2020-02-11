@@ -30,8 +30,9 @@
 				root: [
 					[/\{[a-zA-Z 0-9:_!?.,&|()"'+\-*/]{1,64}\}( )*$/, "master-cheat-title"],
 					[/\[[a-zA-Z 0-9:_!?.,&|()"'+\-*/]{1,64}\]( )*$/, "cheat-title"],
-                    [/\b[0-9A-Z]{8}\b/, "cheat-opcode"],
-                    [/./, "error"],
+					[/\b[0-9A-Fa-f]{8}\b/, "cheat-opcode"],
+					[/(?<! ) (?! )/, "space"],
+                    [/./, "error"]
 				],
 			}
 		});
@@ -44,7 +45,8 @@
 				{ token: 'master-cheat-title', foreground: '8080B0' },
 				{ token: 'cheat-title', foreground: '80B080' },
 				{ token: 'cheat-opcode', foreground: 'FFA500' },
-				{ token: 'error', foreground: 'ff0000', fontStyle: 'bold' }
+				{ token: 'space', foreground: 'FFA500' }, 
+				{ token: 'error', foreground: 'ff0000', fontStyle: 'bold underline' }
 			]
 		});
 		
@@ -62,7 +64,7 @@
 				const hoveredWord = model.getLineContent(position.lineNumber);
 				
 				let cheatTitleRegex = new RegExp(/\[[a-zA-Z 0-9:_!?.,&|()"'+\-*/]{1,64}\]( )*$/);
-				let opCodeRegex = new RegExp(/\b[0-9A-Z]{8}\b/g);
+				let opCodeRegex = new RegExp(/\b[0-9A-Fa-f]{8}\b/g);
 
 				if (!cheatTitleRegex.test(hoveredWord))
 					return null;
@@ -97,11 +99,13 @@
 				let cheatTitleRegex = new RegExp(/\[[a-zA-Z 0-9:_!?.,&|()"'+\-*/]{1,64}\]( )*$/);
 				let masterCheatTitleRegex = new RegExp(/\{[a-zA-Z 0-9:_!?.,&|()"'+\-*/]{1,64}\}( )*$/);
 				
-				let id = 0;
+				let id = 1;
 				for (i = 1; i < model.getLineCount() + 1; i++) {
 					const currentLine = model.getLineContent(i);
 
-					if (cheatTitleRegex.test(currentLine) || masterCheatTitleRegex.test(currentLine)) {
+					let isMasterCheat = masterCheatTitleRegex.test(currentLine);
+
+					if (cheatTitleRegex.test(currentLine) || isMasterCheat) {
 						let idLens = {
 							range: {
 								startLineNumber: i,
@@ -111,7 +115,7 @@
 							},
 							id: "id",
 							command: {
-								title: "ID: " + id
+								title: "ID: " + (isMasterCheat ? 0 : id)
 							}
 						}
 
@@ -130,7 +134,7 @@
 										handleCommand("exec " + id);
 									}
 								
-								}(i, model, id), ''),
+								}(i, model, (isMasterCheat ? 0 : id)), ''),
 								title: "Execute"
 							}
 						}
@@ -150,7 +154,7 @@
 										handleCommand("disas " + id);
 									}
 								
-								}(i, model, id), ''),
+								}(i, model, (isMasterCheat ? 0 : id)), ''),
 								title: "Disassemble"
 							}
 						}
@@ -159,7 +163,8 @@
 						lenses.push(execLens);
 						lenses.push(disasLens);
 
-						id++;
+						if (!isMasterCheat)
+							id++;
 					}
 				}
 
@@ -181,7 +186,7 @@
 	function calculateCheatInfo() {
 		let cheatTitleRegex = new RegExp(/\[[a-zA-Z 0-9:_!?.,&|()"'+\-*/]{1,64}\]( )*$/);
 		let masterCheatTitleRegex = new RegExp(/\{[a-zA-Z 0-9:_!?.,&|()"'+\-*/]{1,64}\}( )*$/);
-		let opCodeRegex = new RegExp(/\b[0-9A-Z]{8}\b/g);
+		let opCodeRegex = new RegExp(/\b[0-9A-Fa-f]{8}\b/g);
 
 		const opCodeCounter = (str) => {
 			return ((str || '').match(opCodeRegex) || []).length
@@ -193,20 +198,75 @@
 		
 		var model = monaco.editor.getModels()[0];
 
+		var masterCheats = [];
+		var cheats = [];
+
 		for (i = 1; i < model.getLineCount() + 1; i++) {
 			let line = model.getLineContent(i);
 			opcodeCount += opCodeCounter(line);
 
 			if (cheatTitleRegex.test(line) || masterCheatTitleRegex.test(line))
 				cheatCount++;
+
+			masterCheats.push(line.match(masterCheatTitleRegex));
+			cheats.push(line.match(cheatTitleRegex));
 			
 			characterCount += line.length;
 		}
+		
+		masterCheats = masterCheats.filter(Boolean);
+		cheats = cheats.filter(Boolean);
 
-		setCheatInfo(cheatCount, opcodeCount, characterCount);
+		var uniq = cheats.map((cheat) => {
+			return {
+			count: 1,
+			cheat: cheat
+			}
+		})
+		.reduce((a, b) => {
+			a[b.cheat] = (a[b.cheat] || 0) + b.count
+			return a
+		}, {})
+
+		var duplicates = Object.keys(uniq).filter((a) => uniq[a] > 1)
+
+		setCheatInfo(cheatCount, opcodeCount, characterCount, masterCheats.length > 1, duplicates);
 	}
 
-	function executeCheat(startLine, model) {
+	function getCheatStartingLine(id, model) {
+		let cheatTitleRegex = new RegExp(/\[[a-zA-Z 0-9:_!?.,&|()"'+\-*/]{1,64}\]( )*$/);
+		let masterCheatTitleRegex = new RegExp(/\{[a-zA-Z 0-9:_!?.,&|()"'+\-*/]{1,64}\}( )*$/);
+
+		let currId = 0;
+		let lineNumber = 1;
+		while (lineNumber <= model.getLineCount()) {
+			let currLine = model.getLineContent(lineNumber);
+			
+			if (id == 0) 
+				if (masterCheatTitleRegex.test(currLine))
+					return lineNumber;
+
+
+			if (cheatTitleRegex.test(currLine)) {
+				currId++;
+
+				if (currId == id)
+					return lineNumber;
+			}
+			lineNumber++;
+		}
+
+		return 0;
+	}
+
+	function executeCheat(id, model) {
+		var startLine = getCheatStartingLine(id, model);
+
+		if (startLine == 0) {
+			printToConsole("Invalid Cheat id: " + id);
+			return;
+		}
+
 		var i = startLine + 1;
 		var cheatTitleRegex = new RegExp(/\[[a-zA-Z 0-9:_!?.,&|()"'+\-*/]{1,64}\]( )*$/);
 
@@ -217,14 +277,425 @@
 			i++;
 		}
 
-		clearConsole();
+		code.split(" ");
 
-		printToConsole("Hello");
-		printToConsole("World");
+		printToConsole("Executing...");
+		
 	}
 
-	function disassembleCheat(startLine, model) {
+	function disassembleCheat(id, model) {
+		var startLine = getCheatStartingLine(id, model);
 
+		if (startLine == 0) {
+			printToConsole("Invalid Cheat id: " + id);
+			return;
+		}
+
+		var i = startLine + 1;
+		var cheatTitleRegex = new RegExp(/\[[a-zA-Z 0-9:_!?.,&|()"'+\-*/]{1,64}\]( )*$/);
+
+		var code = "";
+
+		while (i <= model.getLineCount() && !cheatTitleRegex.test(model.getLineContent(i))) {
+			code += model.getLineContent(i) + " ";
+			i++;
+		}
+
+		code = code.split(" ");
+
+
+		for (opcode = 0; opcode < code.length;) {
+			let currOpcode = code[opcode];
+			
+			if (currOpcode.match(new RegExp(/0([0-9A-Fa-f]{7})/))) { // Store static value to memory
+				let width = parseInt(currOpcode[1], 16);
+				let region = parseInt(currOpcode[2], 16);
+				let offsetRegister = "R" + currOpcode[3];
+				let offset = currOpcode[6] + currOpcode[7] + code[opcode + 1];
+				let value = code[opcode + 2] + (width == 8 ? code[opcode + 3] : '');
+				
+				switch (width) {
+					case 1: width = "B"; break;
+					case 2: width = "H"; break;
+					case 4: width = "W"; break;
+					case 8: width = "D"; break;
+					default: width = "?"; break;
+				}
+
+				switch (region) {
+					case 0: region = "MAIN"; break;
+					case 1: region = "HEAP"; break;
+					default: region = "INVALID"; break;
+				}
+
+				printToConsole("<strong>STR</strong>" + width + " #0x" + value + ", [ " + region + " + " + offsetRegister + " + 0x" + offset + " ]");
+				
+				opcode += width == 8 ? 4 : 3;
+				continue;
+
+			} else if (currOpcode.match(/1([0-9A-Fa-f]{7})/)) { // Begin Conditional Block
+				let width = parseInt(currOpcode[1], 16);
+				let region = parseInt(currOpcode[2], 16);
+				let condition = parseInt(currOpcode[3], 16);
+				let offset = currOpcode[6] + currOpcode[7] + code[opcode + 1];
+				let value = code[opcode + 2] + (width == 8 ? code[opcode + 3] : '');
+
+				switch (width) {
+					case 1: width = "B"; break;
+					case 2: width = "H"; break;
+					case 4: width = "W"; break;
+					case 8: width = "D"; break;
+					default: width = "?"; break;
+				}
+
+				switch (region) {
+					case 0: region = "MAIN"; break;
+					case 1: region = "HEAP"; break;
+					default: region = "INVALID"; break;
+				}
+
+				switch (condition) {
+					case 1: condition = "GT ";
+					case 2:	condition = "GTE";
+					case 3:	condition = "LT ";
+					case 4:	condition = "LTE";
+					case 5:	condition = "EQ ";
+					case 6: condition = "NEQ";
+					default: condition = "???";
+				}
+				
+				printToConsole("<strong>CMP</strong>" + width + " " + condition + " [ " + region + " + 0x" + offset + " ], " + "#0x" + value);
+
+				opcode += width == 8 ? 4 : 3;
+				continue;
+
+			} else if (currOpcode.match(/2([0-9A-Fa-f]{7})/)) { // End Conditional Block
+				printToConsole("<strong>ENDCMP</strong>");
+			} else if (currOpcode.match(/3([0-9A-Fa-f]{7})/)) { // Start/End Loop
+				let isEndLoop = currOpcode[1] == "1";
+				let register = "R" + currOpcode[3];
+				let value = code[opcode + 1];
+
+				if (!isEndLoop) {
+					printToConsole("<strong>LOOP</strong> " + register + " -> #0x" + value);
+					opCode += 2;
+					continue;
+				} else {
+					printToConsole("<strong>ENDLOOP</strong>");
+					opCode += 1;
+					continue;
+				}
+
+			} else if (currOpcode.match(/4([0-9A-Fa-f]{7})/)) { // Load Register with Static Value
+				let register = "R" + currOpcode[3];
+				let value = code[opcode + 1] + code(opcode + 2);
+
+				printToConsole("<strong>MOV</strong> " + register + ", #0x" + value);
+
+				opCode += 2;
+				continue;
+
+			} else if (currOpcode.match(/5([0-9A-Fa-f]{7})/)) { // Load Register with Memory Value
+				let width = parseInt(currOpcode[1], 16);
+				let region = parseInt(currOpcode[2], 16);
+				let register = "R" + currOpcode[3];
+				let loadFromRegisterAddress = currOpcode[4] == "1";
+				let address = currOpcode[6] + currOpcode[7] + code[opcode + 1];
+
+				switch (width) {
+					case 1: width = "B"; break;
+					case 2: width = "H"; break;
+					case 4: width = "W"; break;
+					case 8: width = "D"; break;
+					default: width = "?"; break;
+				}
+
+				switch (region) {
+					case 0: region = "MAIN"; break;
+					case 1: region = "HEAP"; break;
+					default: region = "INVALID"; break;
+				}
+
+				if (!loadFromRegisterAddress)
+					printToConsole("<strong>LDR</strong>" + width + " " + register + ", [ " + region + " + " + register + " ]");
+				else
+					printToConsole("<strong>LDR</strong>" + width + " " + register + ", [ " + region + " + 0x" + address + " ]");
+
+				opcode += 2;
+				continue;
+
+			} else if (currOpcode.match(/6([0-9A-Fa-f]{7})/)) { // Store Static Value to Register Memory Address
+				let width = parseInt(currOpcode[1], 16);
+				let baseRegister = "R" + currOpcode[3];
+				let incrementRegisterFlag = currOpcode[4] == "1";
+				let offsetRegisterFlag = currOpcode[5] == "1";
+				let offsetRegister = "R" + currOpcode[6];
+				let value = code[opcode + 1] + code[opcode + 2];
+
+				switch (width) {
+					case 1: width = "B"; break;
+					case 2: width = "H"; break;
+					case 4: width = "W"; break;
+					case 8: width = "D"; break;
+					default: width = "?"; break;
+				}
+
+				incrementRegisterFlag = incrementRegisterFlag ? "!" : "";
+
+				if (offsetRegisterFlag)
+					printToConsole("<strong>STR</strong>" + width + " #0x" + value + ", [ " + baseRegister + " + " + offsetRegister + " ]" + incrementRegisterFlag);
+				else
+					printToConsole("<strong>STR</strong>" + width + " #0x" + value + ", [ " + baseRegister + " ]" + incrementRegisterFlag);
+
+				opcode += 3;
+				continue;
+
+			} else if (currOpcode.match(/7([0-9A-Fa-f]{7})/)) { // Legacy Arithmetic
+				let width = parseInt(currOpcode[1], 16);
+				let register = "R" + currOpcode[3];
+				let operation = parseInt(currOpcode[4], 16);
+				let value = code[opcode + 1];
+
+				switch (width) {
+					case 1: width = "B"; break;
+					case 2: width = "H"; break;
+					case 4: width = "W"; break;
+					case 8: width = "D"; break;
+					default: width = "?"; break;
+				}
+
+				switch (operation) {
+					case 0: operation = "ADD"; break;
+					case 1: operation = "SUB"; break;
+					case 2: operation = "MUL"; break;
+					case 3:	operation = "SLL"; break;
+					case 4: operation = "SRL"; break;
+					default: operation = "???"; break;
+				}
+
+				printToConsole("<strong>" + operation + "</strong>" + width + " " + register + ", " + register + ", #0x" + value);
+
+				opcode += 2;
+				continue;
+
+			} else if (currOpcode.match(/8([0-9A-Fa-f]{7})/)) { // Begin Keypress Conditional Block
+				let buttons = parseInt(currOpcode.substring(1), 16);
+
+				let buttonStr = "";
+				console.log(buttons);
+				if (buttons == 0)
+					buttonStr = "NONE";
+				else {
+					for (bitPos = 0; bitPos < 27; bitPos++) {
+						console.log(buttons & (1 << bitPos));
+						if ((buttons & (1 << bitPos)) > 0) {
+							switch (1 << bitPos) {
+								case 0x0000001: buttonStr += "A | "; break;
+								case 0x0000002: buttonStr += "B | "; break;
+								case 0x0000004: buttonStr += "X | "; break;
+								case 0x0000008: buttonStr += "Y | "; break;
+								case 0x0000010: buttonStr += "LS | "; break;
+								case 0x0000020: buttonStr += "RS | "; break;
+								case 0x0000040: buttonStr += "L | "; break;
+								case 0x0000080: buttonStr += "R | "; break;
+								case 0x0000100: buttonStr += "ZL | "; break;
+								case 0x0000200: buttonStr += "ZR | "; break;
+								case 0x0000400: buttonStr += "PLUS | "; break;
+								case 0x0000800: buttonStr += "MINUS | "; break;
+								case 0x0001000: buttonStr += "LEFT | "; break;
+								case 0x0002000: buttonStr += "UP | "; break;
+								case 0x0004000: buttonStr += "RIGHT | "; break;
+								case 0x0008000: buttonStr += "DOWN | "; break;
+								case 0x0010000: buttonStr += "Left Stick Left | "; break;
+								case 0x0020000: buttonStr += "Left Stick Up | "; break;
+								case 0x0040000: buttonStr += "Left Stick Right | "; break;
+								case 0x0080000: buttonStr += "Left Stick Down | "; break;
+								case 0x0100000: buttonStr += "Right Stick Left | "; break;
+								case 0x0200000: buttonStr += "Right Stick Up | "; break;
+								case 0x0400000: buttonStr += "Right Stick Right | "; break;
+								case 0x0800000: buttonStr += "Right Stick Down | "; break;
+								case 0x1000000: buttonStr += "SL | "; break;
+								case 0x2000000: buttonStr += "SR | "; break;
+							}
+						}
+					}
+
+					buttonStr = buttonStr.slice(0, -2);
+				}
+
+				printToConsole("<strong>BTNCMP</strong> " + buttonStr);
+
+				opCode += 2;
+				continue;
+
+			} else if (currOpcode.match(/9([0-9A-Fa-f]{7})/)) { // Perform Arithmetic
+				let width = parseInt(currOpcode[1], 16);
+				let operation = parseInt(currOpcode[2], 16);
+				let dstRegister = "R" + currOpcode[3];
+				let lhRegister = "R" + currOpcode[4];
+				let rhRegister = "R" + currOpcode[6];
+
+				let immediateValueFlag = currOpcode[5] == 1;
+				let value = code[opcode + 2] + (width == 8 ? code[opcode + 3] : '');
+
+				switch (width) {
+					case 1: width = "B"; break;
+					case 2: width = "H"; break;
+					case 4: width = "W"; break;
+					case 8: width = "D"; break;
+					default: width = "?"; break;
+				}
+
+				switch (operation) {
+					case 0:  operation = "ADD"; break;
+					case 1:  operation = "SUB"; break;
+					case 2:  operation = "MUL"; break;
+					case 3:	 operation = "SLL"; break;
+					case 4:  operation = "SRL"; break;
+					case 5:  operation = "AND"; break;
+					case 6:  operation = "ORR"; break;
+					case 7:  operation = "NOT"; break;
+					case 8:  operation = "XOR"; break;
+					case 9:  operation = "MOV"; break;
+					default: operation = "???"; break;
+				}
+				
+				if (operator == "NOT" || operator == "MOV") {
+					if (!immediateValueFlag)
+						printToConsole("<strong>" + operation + "</strong>" + width + " " + dstRegister + ", " + lhRegister);
+					else
+						printToConsole("<strong>" + operation + "</strong>" + width + " " + dstRegister + ", " + lhRegister);
+				} else {
+					if (!immediateValueFlag)
+						printToConsole("<strong>" + operation + "</strong>" + width + " " + dstRegister + ", " + lhRegister + ", " + rhRegister);
+					else
+						printToConsole("<strong>" + operation + "</strong>" + width + " " + dstRegister + ", " + lhRegister + ", #0x" + value);
+				}
+
+
+				if (!immediateValueFlag)
+					opcode += 1;
+				else
+					opcode += width == 8 ? 3 : 2;
+				
+				continue;
+
+			} else if (currOpcode.match(/A([0-9A-Fa-f]{7})/)) { // Store Register to Memory Address
+				let width = parseInt(currOpcode[1], 16);
+				let srcRegister = "R" + currOpcode[2];
+				let baseOffsetRegister = "R" + currOpcode[3];
+				let incrementRegisterFlag = currOpcode[4] == "1";
+				let offsetType = parseInt(currOpcode[5]);
+				let offsetRegister = "R" + currOpcode[6];
+				let memoryType = parseInt(currOpcode[6]);
+				let value = currOpcode[7] + ((offsetType == 2 || offsetType == 4 || offsetType == 5) ? code[opcode + 1] : "");
+
+				switch (width) {
+					case 1: width = "B"; break;
+					case 2: width = "H"; break;
+					case 4: width = "W"; break;
+					case 8: width = "D"; break;
+					default: width = "?"; break;
+				}
+
+				switch (region) {
+					case 0: region = "MAIN"; break;
+					case 1: region = "HEAP"; break;
+					default: region = "INVALID"; break;
+				}
+
+				incrementRegisterFlag = incrementRegisterFlag ? "!" : "";
+
+				switch (offsetType) {
+					case 0: printToConsole("<strong>STR</strong>" + width + " " + srcRegister + ", [ " + baseOffsetRegister + " ]" + incrementRegisterFlag); break;
+					case 1: printToConsole("<strong>STR</strong>" + width + " " + srcRegister + ", [ " + baseOffsetRegister + " + " + offsetRegister + " ]" + incrementRegisterFlag); break;
+					case 2: printToConsole("<strong>STR</strong>" + width + " " + srcRegister + ", [ " + baseOffsetRegister + " + #0x" + value + " ]" + incrementRegisterFlag); break;
+					case 3: printToConsole("<strong>STR</strong>" + width + " " + srcRegister + ", [ " + region + " + " + baseRegister + " ]" + incrementRegisterFlag); break;
+					case 4: printToConsole("<strong>STR</strong>" + width + " " + srcRegister + ", [ " + region + " + #0x" + value + " ]" + incrementRegisterFlag); break;
+					case 5: printToConsole("<strong>STR</strong>" + width + " " + srcRegister + ", [ " + region + " + " + offsetRegister + " + #0x" + value + " ]" + incrementRegisterFlag); break;
+				}
+
+				if (offsetType == 2 || offsetType == 4 || offsetType == 5)
+					opcode += 2;
+				else
+					opcode += 1;
+				
+				continue;
+				
+			} else if (currOpcode.match(/(C|D|E|F)([0-9A-Fa-f]{7})/)) { // Extended-Width Instructions
+
+				if (currOpcode.match(/C0([0-9A-Fa-f]{6})/)) {
+					let width = parseInt(currOpcode[2], 16);
+					let condition = parseInt(currOpcode[3], 16);
+					let sourceRegister = "R" + currOpcode[4];
+					let operandType = parseInt(currOpcode[5], 16);
+
+					let region = parseInt(currOpcode[6], 16);
+					let addressRegister = "R" + currOpcode[6];
+					let otherRegister = "R" + currOpcode[6];
+					let relativeAddress = currOpcode[7] + code[opcode + 1];
+					let offsetRegister = "R" + currOpcode[7];
+					let value = (operandType == 4) ? (code[opcode + 1] + (width == 8 ? code[opcode + 2] : '')) : '';
+
+
+					switch (width) {
+						case 1: width = "B"; break;
+						case 2: width = "H"; break;
+						case 4: width = "W"; break;
+						case 8: width = "D"; break;
+						default: width = "?"; break;
+					}
+	
+					switch (region) {
+						case 0: region = "MAIN"; break;
+						case 1: region = "HEAP"; break;
+						default: region = "INVALID"; break;
+					}
+	
+					switch (condition) {
+						case 1: condition = "GT ";
+						case 2:	condition = "GTE";
+						case 3:	condition = "LT ";
+						case 4:	condition = "LTE";
+						case 5:	condition = "EQ ";
+						case 6: condition = "NEQ";
+						default: condition = "???";
+					}
+
+					switch (operandType) {
+						case 0: printToConsole("<strong>CMP</strong>" + width + " " + condition + ", " + sourceRegister + ", [ " + region + " + 0x" + relativeAddress + " ]"); break;
+						case 1: printToConsole("<strong>CMP</strong>" + width + " " + condition + ", " + sourceRegister + ", [ " + region + offsetRegister + " ]"); break;
+						case 2: printToConsole("<strong>CMP</strong>" + width + " " + condition + ", " + sourceRegister + ", [ " + addressRegister + " + 0x" + relativeAddress + " ]"); break;
+						case 3: printToConsole("<strong>CMP</strong>" + width + " " + condition + ", " + sourceRegister + ", [ " + addressRegister + offsetRegister + " ]"); break;
+						case 4: printToConsole("<strong>CMP</strong>" + width + " " + condition + ", " + sourceRegister + ", #0x" + value); break;
+						case 5: printToConsole("<strong>CMP</strong>" + width + " " + condition + ", " + sourceRegister + ", " + otherRegister); break;
+						default:
+					}
+
+					if (operandType == 0 || operandType == 2)
+						opcode += 2;
+					else if (operandType == 4)
+						opcode += (width == 8) ? 3 : 2;
+					else
+						opcode += 1;
+
+					continue;
+					
+				}
+
+			} else { // Invalid
+				if (currOpcode.trim() == "") {
+					opcode++;
+					continue;
+				}
+
+				printToConsole("Invalid opcode " + currOpcode + "!");
+			}
+			opcode++;
+		}
+
+		printToConsole("");
+		printToConsole("<strong>Size: </strong> " + opcode);
 	}
 
 	function clearConsole() {
@@ -240,12 +711,14 @@
 		consoleScroller.scrollTop = consoleScroller.scrollHeight;
 	}
 
-	function setCheatInfo(cheatCount, opcodeCount, size) {
+	function setCheatInfo(cheatCount, opcodeCount, size, multipleMasterCheats, duplicateCheats) {
 		window.parent.document.getElementById("info").innerHTML = [
-			'<strong>Total Cheat count: </strong>' + cheatCount + ' / 128<br>',
-			'<strong>Total Opcode count: </strong>' + opcodeCount + ' / 1024<br>',
-			'<strong>Total size: </strong>' + size + ' bytes<br>'
-		].join('\n');
+			'<strong>Total Cheat count: </strong>' + cheatCount + ' / 128 ' + (cheatCount > 128 ? '<i data-emoji=⚠️></i>' : ''),
+			'<strong>Total Opcode count: </strong>' + opcodeCount + ' / 1024 ' + (opcodeCount > 1024 ? '<i data-emoji=⚠️></i>' : ''),
+			'<strong>Total size: </strong>' + size + ' bytes',
+			multipleMasterCheats ? '<font color=orange>Multiple Master cheats found!</font></strong>' : '',
+			duplicateCheats.length > 0 ? '<font color=orange>Duplicate cheats found! </font></strong>' + duplicateCheats : ''
+		].join('<br>');
 	}
 
 	function getCode() {
@@ -282,17 +755,21 @@
 	});
 
 	function handleCommand(command) {
+		var model = monaco.editor.getModels()[0];
+		var args = command.split(" ");
+		args.shift();
+		
 		switch (command.split(" ")[0]) {
 			case "help":
 				printToConsole("<strong>EdiZon Cheat Emulator v1.0.0</strong>");
 				printToConsole("============================");
 				printToConsole("");
 
-				printToConsole("<strong>help</strong>         - Prints this message");
-				printToConsole("<strong>clear</strong>        - Clears the console");
-				printToConsole("<strong>edizon</strong>       - Prints tool information");
-				printToConsole("<strong>exec &lt;id&gt;</strong>    - Executes the cheat with the specified id");
-				printToConsole("<strong>disas &lt;id&gt;</strong>   - Disassembles the cheat with the specified id");
+				printToConsole("<strong>help</strong>         -  Prints this message");
+				printToConsole("<strong>clear</strong>        -  Clears the console");
+				printToConsole("<strong>edizon</strong>       -  Prints tool information");
+				printToConsole("<strong>exec &lt;id&gt;</strong>    -  Executes the cheat with the specified id");
+				printToConsole("<strong>disas &lt;id&gt;</strong>   -  Disassembles the cheat with the specified id");
 
 				break;
 			case "clear":
@@ -305,29 +782,52 @@
 				printToConsole("<font color='orange'>          ;cdO000000000000Oxl;          </font>");
 				printToConsole("<font color='orange'>         ;oO0000000000000OOOOd:         </font>");
 				printToConsole("<font color='orange'>        ;oO000000000000OOOOOOOd;        </font>");
-				printToConsole("<font color='orange'>        ck00KK000K00OOOOOOOOOOkc        </font>");
 				printToConsole("<font color='orange'>        cO0KXXKKXXKKKKKKKKKK0Okl        </font>");
 				printToConsole("<font color='orange'>        :k00KKKKKK0KKK000000OOxc        </font>");
 				printToConsole("<font color='orange'>         lOOOOOOOOOOOOkkkkkkkko;        </font>");
 				printToConsole("<font color='orange'>         ;lkOOOOOOkkkkkkkkkkxl;         </font>");
 				printToConsole("<font color='orange'>           :oxOkkkkkkkkkkkxo:           </font>");
 				printToConsole("<font color='orange'>             okkkkkkkkkkkkd;            </font>");
-				printToConsole("<font color='gray'  >             lkkkkkkkkkkkko;            </font>");
-				printToConsole("<font color='gray'  >             ;d0000000000x:             </font>");
+				printToConsole("<font color='orange'>             ;d0000000000x:             </font>");
 				printToConsole("<font color='gray'  >              lKNNNNNNNNXd;             </font>");
 				printToConsole("<font color='gray'  >               l0NXXXXXOl;              </font>");
 				printToConsole("<font color='gray'  >                cooooooc;               </font>");
-				printToConsole("<font color='gray'  >                                        </font>");
+				printToConsole("<font color='gray'  >                  coc;                  </font>");
 				printToConsole("<font color='gray'  >                                        </font>");
 				break;
 			case "exec":
+				if (args.length != 1) {
+					printToConsole("Usage: exec &lt;id&gt;");
+					break;
+				}
+
+				executeCheat(parseInt(args[0]), model);
 				break;
 			case "disas":
+				if (args.length != 1) {
+					printToConsole("Usage: disas &lt;id&gt;");
+					break;
+				}
+
+				disassembleCheat(parseInt(args[0]), model);
 				break;
 			default:
 				printToConsole(command.split(" ")[0] + ": command not found");
 		}
 	}
+
+	document.onkeydown = function (e) {
+		e = e || window.event;
+		if (e.ctrlKey) {
+			var c = e.which || e.keyCode;
+			switch (c) {
+				case 83:
+					e.preventDefault();     
+					e.stopPropagation();
+				break;
+			}
+		}
+	};
 
 </script>
 </body>
