@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <!-- saved from url=(0027)https://edizon.werwolv.net/ -->
-<html lang="en" style="height: 100%">
-
+<html lang="en">
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+
   <!-- Primary Meta Tags -->
   <title>EdiZon</title>
   <meta name="title" content="EdiZon">
@@ -27,76 +28,56 @@
     content="A save management, editing tool and memory trainer Homebrew for the Nintendo Switch">
   <meta property="twitter:image" content="https://edizon.werwolv.net/resources/meta_embed.jpg">
 
-  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
-    integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
-  <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
-    integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
-    crossorigin="anonymous"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"
-    integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1"
-    crossorigin="anonymous"></script>
-  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
-    integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
-    crossorigin="anonymous"></script>
-
-
-  <script defer="" src="https://use.fontawesome.com/releases/v5.0.13/js/solid.js"
-    integrity="sha384-tzzSw1/Vo+0N5UhStP3bvwWPq+uvzCMfrN1fEFe+xBmv1C/AtVX5K0uZtmcHitFZ"
-    crossorigin="anonymous"></script>
-  <script defer="" src="https://use.fontawesome.com/releases/v5.0.13/js/fontawesome.js"
-    integrity="sha384-6OIrr52G08NpOFSZdxxz1xdNSndlD4vdcf/q2myIUVO0VsqaGHJsB0RaBE01VTOY"
-    crossorigin="anonymous"></script>
-
-  <link rel="stylesheet" type="text/css" href="../style.css" />
+  <link rel="stylesheet" type="text/css" href="style.css">
 </head>
+<body>
+  <div class="container flex-column">
+    <h1 class="header">Cheat Emulator</h2>
+      
+    <div class="content flex-row">
+      <div class="editor shadow">
+        <iframe id="editor" src="editor.html" style="width: 100%; height: 100%" frameBorder="0"></iframe>
+      </div> <!-- .editor -->
 
-<body style="width: 100%; height: 100%">
+      <div class="right-column flex-column">
+        <div class="console shadow">
+          <div id="console-scroll" class="console-scroll">
+            <div id="console" class="console-feed">
+              <pre>$ ==== Cheat Emulator ====</pre>
+              <pre>$ Type 'help' for more information</pre>
+            </div> <!-- .console-feed -->
+          </div> <!-- .cheat-console -->
+    
+          <div class="cheat-console-input-container flex-row">
+            <p>&gt;</p>
+            <input id="console-input" class="cheat-console-input">
+          </div> <!-- .cheat-console-input-container -->
+        </div> <!-- .console -->
 
-<div class="container">
-<h2>Cheat Emulator</h2>
-<br>
-  <div class="cheat-editor">
-      <iframe id="editor" src="editor.html" style="width: 100%; height: 100%" frameBorder="0"></iframe>
-  </div>
-  
-  <div class="cheat-console-container">
-    <div id="console-scroll" class="cheat-console" style="overflow-y: scroll">
-      <div id="console" style="margin: 20px; overflow-y: scroll">
-        <pre>$ ==== Cheat Emulator ====</pre>
-        <pre>$ Type 'help' for more information</pre>
-      </div>
-    </div>
+        <div class="info shadow">
+          <p id="info">
+            <strong>Total Cheat count: </strong>0 / 128<br>
+            <strong>Total Opcode count: </strong>0 / 1024<br>
+            <strong>Total size: </strong>0 bytes<br>
+          </p> <!-- #info -->
+        </div> <!-- .info -->
+      </div> <!-- right-column -->
+    </div> <!-- .content -->
+  </div><!-- .container -->
 
-    <div class="cheat-console-input-container">
-    >&ensp; 
-    <input id="console-input" class="cheat-console-input"></input>
-    </div>
-  </div>
-
-  <div class="cheat-info">
-    <div id="info" style="margin: 20px">
-      <strong>Total Cheat count: </strong>0 / 128<br>
-      <strong>Total Opcode count: </strong>0 / 1024<br>
-      <strong>Total size: </strong>0 bytes<br>
-    </div>
-  </div>
-</div>
-
-<script>
-	document.onkeydown = function (e) {
-		e = e || window.event;
-		if (e.ctrlKey) {
-			var c = e.which || e.keyCode;
-			switch (c) {
-				case 83:
-					e.preventDefault();     
-					e.stopPropagation();
-				break;
-			}
-		}
-	};
-</script>
-
+  <script>
+    document.onkeydown = (e) => {
+      e = e || window.event;
+      if (e.ctrlKey) {
+        var c = e.which || e.keyCode;
+        switch (c) {
+          case 83:
+            e.preventDefault();     
+            e.stopPropagation();
+          break;
+        }
+      }
+    };
+  </script>
 </body>
-
 </html>

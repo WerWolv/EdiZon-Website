@@ -1,0 +1,124 @@
+html { 
+  background: #5D4F4E;
+  color: #FFF;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 16px; /* All rem units will be relative to this value. */
+  height: 100%;
+  margin: 0;
+  width: 100%;
+}
+
+body {
+  height: calc(100% - 30px); /* Subtract the margins. */
+  margin: 15px;
+  width: calc(100% - 30px); /* Subtract the margins. */
+}
+
+.flex-row {
+  display: flex;
+}
+
+.flex-column {
+  display: flex;
+  flex-direction: column;
+}
+
+.shadow {
+  box-shadow: 0px 10px 10px rgba(0,0,0,0.4);
+}
+
+.container {
+  height: 100%;
+  width: 100%;
+}
+
+.header {
+  flex: 0 0 45px;
+  font-size: 2rem; /* 32px */
+  font-weight: normal;
+  margin: 0;
+  text-align: center;
+}
+
+.content {
+  flex: 1 1 auto;
+}
+
+.editor {
+  background-color: #1E1E1E;
+  flex: 1 1 50%;
+  margin: 15px;
+}
+
+.right-column {
+  flex: 1 1 50%;
+}
+
+.console {
+  background: #000;
+  flex: 1 0 60%;
+  margin: 15px;
+  position: relative; /* This makes all absolute positioned children relative to this element. */
+}
+
+.console-scroll {
+  height: calc(100% - 24px);
+  left: 0;
+  overflow-x: hidden;
+  overflow-y: scroll;
+  position: absolute; /* Had to be absolute positioned so scrolling would work else Flexbox would just continue to grow. */
+  top: 0;
+  width: 100%;
+}
+
+.console-feed {
+  margin: 15px;
+}
+
+.console-feed pre {
+  color: #D3D3D3;
+  font-family: "Courier New";
+  font-size: 0.875rem; /* 14px */
+  line-height: 1.3125rem; /* 21px */
+  margin: 0;
+}
+
+.cheat-console-input-container {
+  background: #141414;
+  bottom: 0;
+  height: 24px;
+  left: 0;
+  position: absolute;
+  width: 100%;
+}
+
+.cheat-console-input-container p {
+  color: #D3D3D3;
+  flex: 0 0 auto;
+  font-family: "Courier New";
+  font-weight: bold;
+  line-height: 24px; /* Make sure text is vertically aligned. */
+  margin: 0;
+  padding: 0 10px;
+}
+
+.cheat-console-input-container input {
+  background-color: #141414;
+  border: 0 none;
+  color: #D3D3D3;
+  flex: 1 1 auto;
+  outline: none;
+}
+
+.info {
+  background: #1E2132;
+  flex: 1 1 33%;
+  font-family: "Courier New";
+  font-size: 1rem; /* 16px */
+  line-height: 1.5rem; /* 24px */
+  margin: 15px;
+}
+
+.info p {
+  margin: 15px;
+}
