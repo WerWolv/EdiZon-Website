@@ -31,7 +31,7 @@
 					[/\{[a-zA-Z 0-9:_!?.,&|()"'+\-*/]{1,64}\}( )*$/, "master-cheat-title"],
 					[/\[[a-zA-Z 0-9:_!?.,&|()"'+\-*/]{1,64}\]( )*$/, "cheat-title"],
 					[/\b[0-9A-Fa-f]{8}\b/, "cheat-opcode"],
-					[/(?<! ) (?! )/, "space"],
+					[/ (?! )/, "space"],
                     [/./, "error"]
 				],
 			}
@@ -301,7 +301,7 @@
 			i++;
 		}
 
-		code = code.split(" ");
+		code = code.trim().split(" ");
 
 
 		for (opcode = 0; opcode < code.length;) {
@@ -680,7 +680,7 @@
 						opcode += 1;
 
 					continue;
-					
+
 				}
 
 			} else { // Invalid
@@ -789,7 +789,7 @@
 				printToConsole("<font color='orange'>           :oxOkkkkkkkkkkkxo:           </font>");
 				printToConsole("<font color='orange'>             okkkkkkkkkkkkd;            </font>");
 				printToConsole("<font color='orange'>             ;d0000000000x:             </font>");
-				printToConsole("<font color='gray'  >              lKNNNNNNNNXd;             </font>");
+				printToConsole("<font color='black' >              lKNNNNNNNNXd;             </font>");
 				printToConsole("<font color='gray'  >               l0NXXXXXOl;              </font>");
 				printToConsole("<font color='gray'  >                cooooooc;               </font>");
 				printToConsole("<font color='gray'  >                  coc;                  </font>");
