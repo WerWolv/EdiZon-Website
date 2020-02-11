@@ -28,8 +28,9 @@
 		monaco.languages.setMonarchTokensProvider('cheat', {
 			tokenizer: {
 				root: [
-					[/\[[a-zA-Z 0-9:_!?.,&|()"'+\-*/]{1,64}\]/, "cheat-title"],
-                    [/(\b(| |\n)[0-9a-zA-Z]{8}(| |\n)\b)/, "cheat-opcode"],
+					[/\{[a-zA-Z 0-9:_!?.,&|()"'+\-*/]{1,64}\}( )*$/, "master-cheat-title"],
+					[/\[[a-zA-Z 0-9:_!?.,&|()"'+\-*/]{1,64}\]( )*$/, "cheat-title"],
+                    [/\b[0-9A-Z]{8}\b/, "cheat-opcode"],
                     [/./, "error"],
 				],
 			}
@@ -38,57 +39,296 @@
 		// Define a new theme that constains only rules that match this language
 		monaco.editor.defineTheme('cheat-highlighting', {
 			base: 'vs-dark',
-			inherit: false,
+			inherit: true,
 			rules: [
-				{ token: 'cheat-title', foreground: '808080' },
-				{ token: 'error', foreground: 'ff0000', fontStyle: 'bold' },
-				{ token: 'cheat-opcode', foreground: 'FFA500' }
+				{ token: 'master-cheat-title', foreground: '8080B0' },
+				{ token: 'cheat-title', foreground: '80B080' },
+				{ token: 'cheat-opcode', foreground: 'FFA500' },
+				{ token: 'error', foreground: 'ff0000', fontStyle: 'bold' }
 			]
 		});
 		
-		var editor = monaco.editor.create(document.getElementById('container'), {
+		let editor = monaco.editor.create(document.getElementById('container'), {
 			theme: 'cheat-highlighting',
 			value: getCode(),
 			language: 'cheat',
-             minimap: {
-                enabled: false
-            }
+			automaticLayout: true
 		});
+
+		calculateCheatInfo();
 
         monaco.languages.registerHoverProvider('cheat', {
             provideHover: function (model, position) {
-                const hoveredWord = model.getWordAtPosition(position);
+				const hoveredWord = model.getLineContent(position.lineNumber);
+				
+				let cheatTitleRegex = new RegExp(/\[[a-zA-Z 0-9:_!?.,&|()"'+\-*/]{1,64}\]( )*$/);
+				let opCodeRegex = new RegExp(/\b[0-9A-Z]{8}\b/g);
+
+				if (!cheatTitleRegex.test(hoveredWord))
+					return null;
+
+				const opCodeCounter = (str) => {
+					return ((str || '').match(opCodeRegex) || []).length
+				}
+
+				let opcodeCount = 0;
+				for (i = position.lineNumber + 1; i < model.getLineCount() + 1; i++) {
+					const currentLine = model.getLineContent(i);
+
+					if (cheatTitleRegex.test(currentLine))
+						break;
+						
+					opcodeCount += opCodeCounter(currentLine);
+				}
+
                 return {
                     contents: [
-                        { value: '**SOURCE**' },
-                        { value: 'hoveredWord: ' + hoveredWord.word }
+                        { value: '**Cheat "' + hoveredWord.slice(1, -1) + '"**' },
+                        { value: 'Opcode count: ' + opcodeCount + ' / 256' }
                     ]
                 }
             }
-        });
+		});
+		
+		monaco.languages.registerCodeLensProvider('cheat', {
+			provideCodeLenses: function (model, token) {
+				let lenses = [];
+				
+				let cheatTitleRegex = new RegExp(/\[[a-zA-Z 0-9:_!?.,&|()"'+\-*/]{1,64}\]( )*$/);
+				let masterCheatTitleRegex = new RegExp(/\{[a-zA-Z 0-9:_!?.,&|()"'+\-*/]{1,64}\}( )*$/);
+				
+				let id = 0;
+				for (i = 1; i < model.getLineCount() + 1; i++) {
+					const currentLine = model.getLineContent(i);
+
+					if (cheatTitleRegex.test(currentLine) || masterCheatTitleRegex.test(currentLine)) {
+						let idLens = {
+							range: {
+								startLineNumber: i,
+								startColumn: 1,
+								endLineNumber: i + 1,
+								endColumn: 1
+							},
+							id: "id",
+							command: {
+								title: "ID: " + id
+							}
+						}
+
+						let execLens = {                
+							range: {
+								startLineNumber: i,
+								startColumn: 1,
+								endLineNumber: i + 1,
+								endColumn: 1
+							},
+							id: "exec",
+							command: {
+								id: editor.addCommand(0, function (lineNumber, model, id) {
+									return function() {
+										printToConsole("exec " + id);
+										handleCommand("exec " + id);
+									}
+								
+								}(i, model, id), ''),
+								title: "Execute"
+							}
+						}
+
+						let disasLens = {                
+							range: {
+								startLineNumber: i,
+								startColumn: 1,
+								endLineNumber: i + 1,
+								endColumn: 1
+							},
+							id: "disas",
+							command: {
+								id: editor.addCommand(0, function (lineNumber, model, id) {
+									return function() {
+										printToConsole("disas " + id);
+										handleCommand("disas " + id);
+									}
+								
+								}(i, model, id), ''),
+								title: "Disassemble"
+							}
+						}
+						
+						lenses.push(idLens);
+						lenses.push(execLens);
+						lenses.push(disasLens);
+
+						id++;
+					}
+				}
+
+				return {
+					lenses: lenses
+				};
+			},
+			resolveCodeLens: function (model, codeLens, token) {
+				return codeLens;
+			}
+		});
+
+		editor.onDidChangeModelContent((e) => {
+			calculateCheatInfo();
+		});
+
 	});
 
-    function getType(code) {
-        
-    }
+	function calculateCheatInfo() {
+		let cheatTitleRegex = new RegExp(/\[[a-zA-Z 0-9:_!?.,&|()"'+\-*/]{1,64}\]( )*$/);
+		let masterCheatTitleRegex = new RegExp(/\{[a-zA-Z 0-9:_!?.,&|()"'+\-*/]{1,64}\}( )*$/);
+		let opCodeRegex = new RegExp(/\b[0-9A-Z]{8}\b/g);
 
-    function parseCode(code) {
+		const opCodeCounter = (str) => {
+			return ((str || '').match(opCodeRegex) || []).length
+		}
+		
+		let opcodeCount = 0;
+		let characterCount = 0;
+		let cheatCount = 0;
+		
+		var model = monaco.editor.getModels()[0];
 
-    }
+		for (i = 1; i < model.getLineCount() + 1; i++) {
+			let line = model.getLineContent(i);
+			opcodeCount += opCodeCounter(line);
+
+			if (cheatTitleRegex.test(line) || masterCheatTitleRegex.test(line))
+				cheatCount++;
+			
+			characterCount += line.length;
+		}
+
+		setCheatInfo(cheatCount, opcodeCount, characterCount);
+	}
+
+	function executeCheat(startLine, model) {
+		var i = startLine + 1;
+		var cheatTitleRegex = new RegExp(/\[[a-zA-Z 0-9:_!?.,&|()"'+\-*/]{1,64}\]( )*$/);
+
+		var code = "";
+
+		while (i <= model.getLineCount() && !cheatTitleRegex.test(model.getLineContent(i))) {
+			code += model.getLineContent(i) + " ";
+			i++;
+		}
+
+		clearConsole();
+
+		printToConsole("Hello");
+		printToConsole("World");
+	}
+
+	function disassembleCheat(startLine, model) {
+
+	}
+
+	function clearConsole() {
+		window.parent.document.getElementById("console").innerHTML = "";
+	}
+
+	function printToConsole(text) {
+		var console = window.parent.document.getElementById("console");
+		var consoleScroller = window.parent.document.getElementById("console-scroll");
+
+		text.replace(" ", "&nbsp;")
+		console.innerHTML += ("<pre>$ " + text + "</pre>"); 
+		consoleScroller.scrollTop = consoleScroller.scrollHeight;
+	}
+
+	function setCheatInfo(cheatCount, opcodeCount, size) {
+		window.parent.document.getElementById("info").innerHTML = [
+			'<strong>Total Cheat count: </strong>' + cheatCount + ' / 128<br>',
+			'<strong>Total Opcode count: </strong>' + opcodeCount + ' / 1024<br>',
+			'<strong>Total size: </strong>' + size + ' bytes<br>'
+		].join('\n');
+	}
 
 	function getCode() {
 		return [
+			'{Master}',
+			'58000000 018A6210',
+			'78000000 0000243C',
+			'64000000 00000000 42700000',
+			'',
             '[60 FPS]',
             '58000000 018A6210',
             '78000000 0000243C',
             '64000000 00000000 42700000',
-            ' ',
+            '',
             '[30 FPS]',
             '58000000 018A6210',
             '78000000 0000243C',
             '64000000 00000000 41F00000',
 		].join('\n');;
 	}
+
+	var consoleInputField = window.parent.document.getElementById("console-input");
+
+	consoleInputField.addEventListener("keyup", function(event) {
+		if (event.keyCode === 13) {
+			event.preventDefault();
+
+			var command = consoleInputField.value;
+			printToConsole(command);
+			consoleInputField.value = "";
+
+			handleCommand(command);
+		}
+	});
+
+	function handleCommand(command) {
+		switch (command.split(" ")[0]) {
+			case "help":
+				printToConsole("<strong>EdiZon Cheat Emulator v1.0.0</strong>");
+				printToConsole("============================");
+				printToConsole("");
+
+				printToConsole("<strong>help</strong>         - Prints this message");
+				printToConsole("<strong>clear</strong>        - Clears the console");
+				printToConsole("<strong>edizon</strong>       - Prints tool information");
+				printToConsole("<strong>exec &lt;id&gt;</strong>    - Executes the cheat with the specified id");
+				printToConsole("<strong>disas &lt;id&gt;</strong>   - Disassembles the cheat with the specified id");
+
+				break;
+			case "clear":
+				clearConsole();
+				break;
+			case "edizon":
+				printToConsole("<font color='orange'>                                        </font>");
+				printToConsole("<font color='orange'>                ;;::::;;                </font><strong>EdiZon v4.0.0</strong>");
+				printToConsole("<font color='orange'>            ;:ldxkkkkkkxdoc;            </font><strong>by WerWolv</strong>");
+				printToConsole("<font color='orange'>          ;cdO000000000000Oxl;          </font>");
+				printToConsole("<font color='orange'>         ;oO0000000000000OOOOd:         </font>");
+				printToConsole("<font color='orange'>        ;oO000000000000OOOOOOOd;        </font>");
+				printToConsole("<font color='orange'>        ck00KK000K00OOOOOOOOOOkc        </font>");
+				printToConsole("<font color='orange'>        cO0KXXKKXXKKKKKKKKKK0Okl        </font>");
+				printToConsole("<font color='orange'>        :k00KKKKKK0KKK000000OOxc        </font>");
+				printToConsole("<font color='orange'>         lOOOOOOOOOOOOkkkkkkkko;        </font>");
+				printToConsole("<font color='orange'>         ;lkOOOOOOkkkkkkkkkkxl;         </font>");
+				printToConsole("<font color='orange'>           :oxOkkkkkkkkkkkxo:           </font>");
+				printToConsole("<font color='orange'>             okkkkkkkkkkkkd;            </font>");
+				printToConsole("<font color='gray'  >             lkkkkkkkkkkkko;            </font>");
+				printToConsole("<font color='gray'  >             ;d0000000000x:             </font>");
+				printToConsole("<font color='gray'  >              lKNNNNNNNNXd;             </font>");
+				printToConsole("<font color='gray'  >               l0NXXXXXOl;              </font>");
+				printToConsole("<font color='gray'  >                cooooooc;               </font>");
+				printToConsole("<font color='gray'  >                                        </font>");
+				printToConsole("<font color='gray'  >                                        </font>");
+				break;
+			case "exec":
+				break;
+			case "disas":
+				break;
+			default:
+				printToConsole(command.split(" ")[0] + ": command not found");
+		}
+	}
+
 </script>
 </body>
 </html>
