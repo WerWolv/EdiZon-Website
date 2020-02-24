@@ -83,6 +83,12 @@ body {
   margin: 0;
 }
 
+.cheat-console-input {
+  color: #D3D3D3;
+  font-family: "Courier New";
+  font-weight: bold;
+}
+
 .cheat-console-input-container {
   background: #141414;
   bottom: 0;

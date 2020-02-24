@@ -63,10 +63,11 @@
             provideHover: function (model, position) {
 				const hoveredWord = model.getLineContent(position.lineNumber);
 				
+				let masterCheatTitleRegex = new RegExp(/\{[a-zA-Z 0-9:_!?.,&|()"'+\-*/]{1,64}\}( )*$/);
 				let cheatTitleRegex = new RegExp(/\[[a-zA-Z 0-9:_!?.,&|()"'+\-*/]{1,64}\]( )*$/);
 				let opCodeRegex = new RegExp(/\b[0-9A-Fa-f]{8}\b/g);
 
-				if (!cheatTitleRegex.test(hoveredWord))
+				if (!cheatTitleRegex.test(hoveredWord) && !masterCheatTitleRegex.test(hoveredWord))
 					return null;
 
 				const opCodeCounter = (str) => {
@@ -77,7 +78,7 @@
 				for (i = position.lineNumber + 1; i < model.getLineCount() + 1; i++) {
 					const currentLine = model.getLineContent(i);
 
-					if (cheatTitleRegex.test(currentLine))
+					if (cheatTitleRegex.test(currentLine) || masterCheatTitleRegex.test(currentLine))
 						break;
 						
 					opcodeCount += opCodeCounter(currentLine);
@@ -169,7 +170,8 @@
 				}
 
 				return {
-					lenses: lenses
+					lenses: lenses,
+					dispose: () => {},
 				};
 			},
 			resolveCodeLens: function (model, codeLens, token) {
@@ -179,6 +181,14 @@
 
 		editor.onDidChangeModelContent((e) => {
 			calculateCheatInfo();
+
+			let model = monaco.editor.getModels()[0];
+			
+			let editorContent = "";
+			for (var i = 1; i < model.getLineCount() + 1; i++)
+				editorContent += model.getLineContent(i) + "\n";
+
+			window.localStorage.setItem("editor_content", editorContent.substr(0, editorContent.length - 1));
 		});
 
 	});
@@ -259,31 +269,18 @@
 		return 0;
 	}
 
+
+	// ----- Cheat Emulator values -----
+
+		var R = [];
+		var memory = new Map();
+
+		const HEAP = 0x1000000000000000;
+		const MAIN = 0x8000000000000000;
+
+	// ---------------------------------
+
 	function executeCheat(id, model) {
-		var startLine = getCheatStartingLine(id, model);
-
-		if (startLine == 0) {
-			printToConsole("Invalid Cheat id: " + id);
-			return;
-		}
-
-		var i = startLine + 1;
-		var cheatTitleRegex = new RegExp(/\[[a-zA-Z 0-9:_!?.,&|()"'+\-*/]{1,64}\]( )*$/);
-
-		var code = "";
-
-		while (i <= model.getLineCount() && !cheatTitleRegex.test(model.getLineContent(i))) {
-			code += model.getLineContent(i) + " ";
-			i++;
-		}
-
-		code.split(" ");
-
-		printToConsole("Executing...");
-		
-	}
-
-	function disassembleCheat(id, model) {
 		var startLine = getCheatStartingLine(id, model);
 
 		if (startLine == 0) {
@@ -313,22 +310,12 @@
 				let offsetRegister = "R" + currOpcode[3];
 				let offset = currOpcode[6] + currOpcode[7] + code[opcode + 1];
 				let value = code[opcode + 2] + (width == 8 ? code[opcode + 3] : '');
-				
-				switch (width) {
-					case 1: width = "B"; break;
-					case 2: width = "H"; break;
-					case 4: width = "W"; break;
-					case 8: width = "D"; break;
-					default: width = "?"; break;
-				}
 
 				switch (region) {
 					case 0: region = "MAIN"; break;
 					case 1: region = "HEAP"; break;
 					default: region = "INVALID"; break;
 				}
-
-				printToConsole("<strong>STR</strong>" + width + " #0x" + value + ", [ " + region + " + " + offsetRegister + " + 0x" + offset + " ]");
 				
 				opcode += width == 8 ? 4 : 3;
 				continue;
@@ -340,14 +327,6 @@
 				let offset = currOpcode[6] + currOpcode[7] + code[opcode + 1];
 				let value = code[opcode + 2] + (width == 8 ? code[opcode + 3] : '');
 
-				switch (width) {
-					case 1: width = "B"; break;
-					case 2: width = "H"; break;
-					case 4: width = "W"; break;
-					case 8: width = "D"; break;
-					default: width = "?"; break;
-				}
-
 				switch (region) {
 					case 0: region = "MAIN"; break;
 					case 1: region = "HEAP"; break;
@@ -355,44 +334,38 @@
 				}
 
 				switch (condition) {
-					case 1: condition = "GT ";
-					case 2:	condition = "GTE";
-					case 3:	condition = "LT ";
-					case 4:	condition = "LTE";
-					case 5:	condition = "EQ ";
-					case 6: condition = "NEQ";
-					default: condition = "???";
+					case 1: condition = "> "; break;
+					case 2:	condition = ">="; break;
+					case 3:	condition = "< "; break;
+					case 4:	condition = "<="; break;
+					case 5:	condition = "=="; break;
+					case 6: condition = "!="; break;
+					default: condition = "??"; break;
 				}
 				
-				printToConsole("<strong>CMP</strong>" + width + " " + condition + " [ " + region + " + 0x" + offset + " ], " + "#0x" + value);
-
 				opcode += width == 8 ? 4 : 3;
 				continue;
 
 			} else if (currOpcode.match(/2([0-9A-Fa-f]{7})/)) { // End Conditional Block
-				printToConsole("<strong>ENDCMP</strong>");
+
 			} else if (currOpcode.match(/3([0-9A-Fa-f]{7})/)) { // Start/End Loop
 				let isEndLoop = currOpcode[1] == "1";
 				let register = "R" + currOpcode[3];
 				let value = code[opcode + 1];
 
 				if (!isEndLoop) {
-					printToConsole("<strong>LOOP</strong> " + register + " -> #0x" + value);
-					opCode += 2;
+					opcode += 2;
 					continue;
 				} else {
-					printToConsole("<strong>ENDLOOP</strong>");
-					opCode += 1;
+					opcode += 1;
 					continue;
 				}
 
 			} else if (currOpcode.match(/4([0-9A-Fa-f]{7})/)) { // Load Register with Static Value
 				let register = "R" + currOpcode[3];
-				let value = code[opcode + 1] + code(opcode + 2);
+				let value = code[opcode + 1] + code[opcode + 2];
 
-				printToConsole("<strong>MOV</strong> " + register + ", #0x" + value);
-
-				opCode += 2;
+				opcode += 2;
 				continue;
 
 			} else if (currOpcode.match(/5([0-9A-Fa-f]{7})/)) { // Load Register with Memory Value
@@ -402,14 +375,6 @@
 				let loadFromRegisterAddress = currOpcode[4] == "1";
 				let address = currOpcode[6] + currOpcode[7] + code[opcode + 1];
 
-				switch (width) {
-					case 1: width = "B"; break;
-					case 2: width = "H"; break;
-					case 4: width = "W"; break;
-					case 8: width = "D"; break;
-					default: width = "?"; break;
-				}
-
 				switch (region) {
 					case 0: region = "MAIN"; break;
 					case 1: region = "HEAP"; break;
@@ -417,9 +382,9 @@
 				}
 
 				if (!loadFromRegisterAddress)
-					printToConsole("<strong>LDR</strong>" + width + " " + register + ", [ " + region + " + " + register + " ]");
+					;
 				else
-					printToConsole("<strong>LDR</strong>" + width + " " + register + ", [ " + region + " + 0x" + address + " ]");
+					;
 
 				opcode += 2;
 				continue;
@@ -432,20 +397,10 @@
 				let offsetRegister = "R" + currOpcode[6];
 				let value = code[opcode + 1] + code[opcode + 2];
 
-				switch (width) {
-					case 1: width = "B"; break;
-					case 2: width = "H"; break;
-					case 4: width = "W"; break;
-					case 8: width = "D"; break;
-					default: width = "?"; break;
-				}
-
-				incrementRegisterFlag = incrementRegisterFlag ? "!" : "";
-
 				if (offsetRegisterFlag)
-					printToConsole("<strong>STR</strong>" + width + " #0x" + value + ", [ " + baseRegister + " + " + offsetRegister + " ]" + incrementRegisterFlag);
+					;
 				else
-					printToConsole("<strong>STR</strong>" + width + " #0x" + value + ", [ " + baseRegister + " ]" + incrementRegisterFlag);
+					;
 
 				opcode += 3;
 				continue;
@@ -456,24 +411,14 @@
 				let operation = parseInt(currOpcode[4], 16);
 				let value = code[opcode + 1];
 
-				switch (width) {
-					case 1: width = "B"; break;
-					case 2: width = "H"; break;
-					case 4: width = "W"; break;
-					case 8: width = "D"; break;
-					default: width = "?"; break;
-				}
-
 				switch (operation) {
-					case 0: operation = "ADD"; break;
-					case 1: operation = "SUB"; break;
-					case 2: operation = "MUL"; break;
-					case 3:	operation = "SLL"; break;
-					case 4: operation = "SRL"; break;
-					default: operation = "???"; break;
+					case 0: operation = "+"; break;
+					case 1: operation = "-"; break;
+					case 2: operation = "*"; break;
+					case 3:	operation = "<<"; break;
+					case 4: operation = ">>"; break;
+					default: operation = "??"; break;
 				}
-
-				printToConsole("<strong>" + operation + "</strong>" + width + " " + register + ", " + register + ", #0x" + value);
 
 				opcode += 2;
 				continue;
@@ -487,7 +432,6 @@
 					buttonStr = "NONE";
 				else {
 					for (bitPos = 0; bitPos < 27; bitPos++) {
-						console.log(buttons & (1 << bitPos));
 						if ((buttons & (1 << bitPos)) > 0) {
 							switch (1 << bitPos) {
 								case 0x0000001: buttonStr += "A | "; break;
@@ -525,7 +469,7 @@
 
 				printToConsole("<strong>BTNCMP</strong> " + buttonStr);
 
-				opCode += 2;
+				opcode += 1;
 				continue;
 
 			} else if (currOpcode.match(/9([0-9A-Fa-f]{7})/)) { // Perform Arithmetic
@@ -653,13 +597,13 @@
 					}
 	
 					switch (condition) {
-						case 1: condition = "GT ";
-						case 2:	condition = "GTE";
-						case 3:	condition = "LT ";
-						case 4:	condition = "LTE";
-						case 5:	condition = "EQ ";
-						case 6: condition = "NEQ";
-						default: condition = "???";
+						case 1: condition = "GT "; break;
+						case 2:	condition = "GTE"; break;
+						case 3:	condition = "LT "; break;
+						case 4:	condition = "LTE"; break;
+						case 5:	condition = "EQ "; break;
+						case 6: condition = "NEQ"; break;
+						default: condition = "???"; break;
 					}
 
 					switch (operandType) {
@@ -676,6 +620,419 @@
 						opcode += 2;
 					else if (operandType == 4)
 						opcode += (width == 8) ? 3 : 2;
+					else
+						opcode += 1;
+
+					continue;
+
+				}
+
+			} else { // Invalid
+				if (currOpcode.trim() == "") {
+					opcode++;
+					continue;
+				}
+
+				printToConsole("Invalid opcode " + currOpcode + "!");
+			}
+			opcode++;
+		}
+		
+	}
+
+	function disassembleCheat(id, model) {
+		var startLine = getCheatStartingLine(id, model);
+
+		if (startLine == 0) {
+			printToConsole("Invalid Cheat id: " + id);
+			return;
+		}
+
+		var i = startLine + 1;
+		var cheatTitleRegex = new RegExp(/\[[a-zA-Z 0-9:_!?.,&|()"'+\-*/]{1,64}\]( )*$/);
+
+		var code = "";
+
+		while (i <= model.getLineCount() && !cheatTitleRegex.test(model.getLineContent(i))) {
+			code += model.getLineContent(i) + " ";
+			i++;
+		}
+
+		code = code.trim().split(" ");
+
+
+		for (opcode = 0; opcode < code.length;) {
+			let currOpcode = code[opcode];
+			
+			if (currOpcode.match(new RegExp(/0([0-9A-Fa-f]{7})/))) { // Store static value to memory
+				let width = parseInt(currOpcode[1], 16);
+				let region = parseInt(currOpcode[2], 16);
+				let offsetRegister = "R" + currOpcode[3];
+				let offset = currOpcode[6] + currOpcode[7] + code[opcode + 1];
+				let value = code[opcode + 2] + (width == 8 ? code[opcode + 3] : '');
+				
+				switch (width) {
+					case 1: width = "B"; break;
+					case 2: width = "H"; break;
+					case 4: width = "W"; break;
+					case 8: width = "D"; break;
+					default: width = "?"; break;
+				}
+
+				switch (region) {
+					case 0: region = "MAIN"; break;
+					case 1: region = "HEAP"; break;
+					default: region = "INVALID"; break;
+				}
+
+				printToConsole("<strong>STR</strong>" + width + " #0x" + value + ", [ " + region + " + " + offsetRegister + " + 0x" + offset + " ]");
+				
+				opcode += width == 8 ? 4 : 3;
+				continue;
+
+			} else if (currOpcode.match(/1([0-9A-Fa-f]{7})/)) { // Begin Conditional Block
+				let width = parseInt(currOpcode[1], 16);
+				let region = parseInt(currOpcode[2], 16);
+				let condition = parseInt(currOpcode[3], 16);
+				let offset = currOpcode[6] + currOpcode[7] + code[opcode + 1];
+				let value = code[opcode + 2] + (width == 8 ? code[opcode + 3] : '');
+
+				switch (width) {
+					case 1: width = "B"; break;
+					case 2: width = "H"; break;
+					case 4: width = "W"; break;
+					case 8: width = "D"; break;
+					default: width = "?"; break;
+				}
+
+				switch (region) {
+					case 0: region = "MAIN"; break;
+					case 1: region = "HEAP"; break;
+					default: region = "INVALID"; break;
+				}
+
+				switch (condition) {
+					case 1: condition = "GT "; break;
+					case 2:	condition = "GTE"; break;
+					case 3:	condition = "LT "; break;
+					case 4:	condition = "LTE"; break;
+					case 5:	condition = "EQ "; break;
+					case 6: condition = "NEQ"; break;
+					default: condition = "???"; break;
+				}
+				
+				printToConsole("<strong>CMP</strong>" + width + " " + condition + " [ " + region + " + 0x" + offset + " ], " + "#0x" + value);
+
+				opcode += width == 8 ? 4 : 3;
+				continue;
+
+			} else if (currOpcode.match(/2([0-9A-Fa-f]{7})/)) { // End Conditional Block
+				printToConsole("<strong>ENDCMP</strong>");
+			} else if (currOpcode.match(/3([0-9A-Fa-f]{7})/)) { // Start/End Loop
+				let isEndLoop = currOpcode[1] == "1";
+				let register = "R" + currOpcode[3];
+				let value = code[opcode + 1];
+
+				if (!isEndLoop) {
+					printToConsole("<strong>LOOP</strong> " + register + " -> #0x" + value);
+					opcode += 2;
+					continue;
+				} else {
+					printToConsole("<strong>ENDLOOP</strong>");
+					opcode += 1;
+					continue;
+				}
+
+			} else if (currOpcode.match(/4([0-9A-Fa-f]{7})/)) { // Load Register with Static Value
+				let register = "R" + currOpcode[3];
+				let value = code[opcode + 1] + code[opcode + 2];
+
+				printToConsole("<strong>MOV</strong> " + register + ", #0x" + value);
+
+				opcode += 3;
+				continue;
+
+			} else if (currOpcode.match(/5([0-9A-Fa-f]{7})/)) { // Load Register with Memory Value
+				let width = parseInt(currOpcode[1], 16);
+				let region = parseInt(currOpcode[2], 16);
+				let register = "R" + currOpcode[3];
+				let loadFromRegisterAddress = currOpcode[4] == "1";
+				let address = currOpcode[6] + currOpcode[7] + code[opcode + 1];
+
+				switch (width) {
+					case 1: width = "B"; break;
+					case 2: width = "H"; break;
+					case 4: width = "W"; break;
+					case 8: width = "D"; break;
+					default: width = "?"; break;
+				}
+
+				switch (region) {
+					case 0: region = "MAIN"; break;
+					case 1: region = "HEAP"; break;
+					default: region = "INVALID"; break;
+				}
+
+				if (!loadFromRegisterAddress)
+					printToConsole("<strong>LDR</strong>" + width + " " + register + ", [ " + region + " + " + register + " ]");
+				else
+					printToConsole("<strong>LDR</strong>" + width + " " + register + ", [ " + region + " + 0x" + address + " ]");
+
+				opcode += 2;
+				continue;
+
+			} else if (currOpcode.match(/6([0-9A-Fa-f]{7})/)) { // Store Static Value to Register Memory Address
+				let width = parseInt(currOpcode[1], 16);
+				let baseRegister = "R" + currOpcode[3];
+				let incrementRegisterFlag = currOpcode[4] == "1";
+				let offsetRegisterFlag = currOpcode[5] == "1";
+				let offsetRegister = "R" + currOpcode[6];
+				let value = code[opcode + 1] + code[opcode + 2];
+
+				switch (width) {
+					case 1: width = "B"; break;
+					case 2: width = "H"; break;
+					case 4: width = "W"; break;
+					case 8: width = "D"; break;
+					default: width = "?"; break;
+				}
+
+				incrementRegisterFlag = incrementRegisterFlag ? "!" : "";
+
+				if (offsetRegisterFlag)
+					printToConsole("<strong>STR</strong>" + width + " #0x" + value + ", [ " + baseRegister + " + " + offsetRegister + " ]" + incrementRegisterFlag);
+				else
+					printToConsole("<strong>STR</strong>" + width + " #0x" + value + ", [ " + baseRegister + " ]" + incrementRegisterFlag);
+
+				opcode += 3;
+				continue;
+
+			} else if (currOpcode.match(/7([0-9A-Fa-f]{7})/)) { // Legacy Arithmetic
+				let width = parseInt(currOpcode[1], 16);
+				let register = "R" + currOpcode[3];
+				let operation = parseInt(currOpcode[4], 16);
+				let value = code[opcode + 1];
+
+				switch (width) {
+					case 1: width = "B"; break;
+					case 2: width = "H"; break;
+					case 4: width = "W"; break;
+					case 8: width = "D"; break;
+					default: width = "?"; break;
+				}
+
+				switch (operation) {
+					case 0: operation = "ADD"; break;
+					case 1: operation = "SUB"; break;
+					case 2: operation = "MUL"; break;
+					case 3:	operation = "SLL"; break;
+					case 4: operation = "SRL"; break;
+					default: operation = "???"; break;
+				}
+
+				printToConsole("<strong>" + operation + "</strong>" + width + " " + register + ", " + register + ", #0x" + value);
+
+				opcode += 2;
+				continue;
+
+			} else if (currOpcode.match(/8([0-9A-Fa-f]{7})/)) { // Begin Keypress Conditional Block
+				let buttons = parseInt(currOpcode.substring(1), 16);
+
+				let buttonStr = "";
+				if (buttons == 0)
+					buttonStr = "NONE";
+				else {
+					for (bitPos = 0; bitPos < 27; bitPos++) {
+						if ((buttons & (1 << bitPos)) > 0) {
+							switch (1 << bitPos) {
+								case 0x0000001: buttonStr += "A, ";  break;
+								case 0x0000002: buttonStr += "B, ";  break;
+								case 0x0000004: buttonStr += "X, ";  break;
+								case 0x0000008: buttonStr += "Y, ";  break;
+								case 0x0000010: buttonStr += "LS, "; break;
+								case 0x0000020: buttonStr += "RS, "; break;
+								case 0x0000040: buttonStr += "L, ";  break;
+								case 0x0000080: buttonStr += "R, ";  break;
+								case 0x0000100: buttonStr += "ZL, ";   break;
+								case 0x0000200: buttonStr += "ZR, ";   break;
+								case 0x0000400: buttonStr += "PLUS, "; break;
+								case 0x0000800: buttonStr += "MINUS, "; break;
+								case 0x0001000: buttonStr += "LEFT, "; break;
+								case 0x0002000: buttonStr += "UP, "; break;
+								case 0x0004000: buttonStr += "RIGHT, "; break;
+								case 0x0008000: buttonStr += "DOWN, "; break;
+								case 0x0010000: buttonStr += "Left Stick Left, "; break;
+								case 0x0020000: buttonStr += "Left Stick Up, "; break;
+								case 0x0040000: buttonStr += "Left Stick Right, "; break;
+								case 0x0080000: buttonStr += "Left Stick Down, "; break;
+								case 0x0100000: buttonStr += "Right Stick Left, "; break;
+								case 0x0200000: buttonStr += "Right Stick Up, "; break;
+								case 0x0400000: buttonStr += "Right Stick Right, "; break;
+								case 0x0800000: buttonStr += "Right Stick Down, "; break;
+								case 0x1000000: buttonStr += "SL, "; break;
+								case 0x2000000: buttonStr += "SR, "; break;
+							}
+						}
+					}
+
+					buttonStr = buttonStr.slice(0, -2);
+				}
+
+				printToConsole("<strong>BTNCMP</strong> { " + buttonStr + " }");
+
+				opcode += 1;
+				continue;
+
+			} else if (currOpcode.match(/9([0-9A-Fa-f]{7})/)) { // Perform Arithmetic
+				let width = parseInt(currOpcode[1], 16);
+				let operation = parseInt(currOpcode[2], 16);
+				let dstRegister = "R" + currOpcode[3];
+				let lhRegister = "R" + currOpcode[4];
+				let rhRegister = "R" + currOpcode[6];
+
+				let immediateValueFlag = currOpcode[5] == 1;
+				let value = code[opcode + 2] + (width == 8 ? code[opcode + 3] : '');
+
+				switch (width) {
+					case 1: width = "B"; break;
+					case 2: width = "H"; break;
+					case 4: width = "W"; break;
+					case 8: width = "D"; break;
+					default: width = "?"; break;
+				}
+
+				switch (operation) {
+					case 0:  operation = "ADD"; break;
+					case 1:  operation = "SUB"; break;
+					case 2:  operation = "MUL"; break;
+					case 3:	 operation = "SLL"; break;
+					case 4:  operation = "SRL"; break;
+					case 5:  operation = "AND"; break;
+					case 6:  operation = "ORR"; break;
+					case 7:  operation = "NOT"; break;
+					case 8:  operation = "XOR"; break;
+					case 9:  operation = "MOV"; break;
+					default: operation = "???"; break;
+				}
+				
+				if (operation == "NOT" || operation == "MOV") {
+					if (!immediateValueFlag)
+						printToConsole("<strong>" + operation + "</strong>" + width + " " + dstRegister + ", " + lhRegister);
+					else
+						printToConsole("<strong>" + operation + "</strong>" + width + " " + dstRegister + ", " + lhRegister);
+				} else {
+					if (!immediateValueFlag)
+						printToConsole("<strong>" + operation + "</strong>" + width + " " + dstRegister + ", " + lhRegister + ", " + rhRegister);
+					else
+						printToConsole("<strong>" + operation + "</strong>" + width + " " + dstRegister + ", " + lhRegister + ", #0x" + value);
+				}
+
+
+				if (!immediateValueFlag)
+					opcode += 1;
+				else
+					opcode += width == 8 ? 3 : 2;
+				
+				continue;
+
+			} else if (currOpcode.match(/A([0-9A-Fa-f]{7})/)) { // Store Register to Memory Address
+				let width = parseInt(currOpcode[1], 16);
+				let srcRegister = "R" + currOpcode[2];
+				let baseOffsetRegister = "R" + currOpcode[3];
+				let incrementRegisterFlag = currOpcode[4] == "1";
+				let offsetType = parseInt(currOpcode[5]);
+				let offsetRegister = "R" + currOpcode[6];
+				let region = parseInt(currOpcode[6]);
+				let value = currOpcode[7] + ((offsetType == 2 || offsetType == 4 || offsetType == 5) ? code[opcode + 1] : "");
+
+				switch (width) {
+					case 1: width = "B"; break;
+					case 2: width = "H"; break;
+					case 4: width = "W"; break;
+					case 8: width = "D"; break;
+					default: width = "?"; break;
+				}
+
+				switch (region) {
+					case 0: region = "MAIN"; break;
+					case 1: region = "HEAP"; break;
+					default: region = "INVALID"; break;
+				}
+
+				incrementRegisterFlag = incrementRegisterFlag ? "!" : "";
+
+				switch (offsetType) {
+					case 0: printToConsole("<strong>STR</strong>" + width + " " + srcRegister + ", [ " + baseOffsetRegister + " ]" + incrementRegisterFlag); break;
+					case 1: printToConsole("<strong>STR</strong>" + width + " " + srcRegister + ", [ " + baseOffsetRegister + " + " + offsetRegister + " ]" + incrementRegisterFlag); break;
+					case 2: printToConsole("<strong>STR</strong>" + width + " " + srcRegister + ", [ " + baseOffsetRegister + " + #0x" + value + " ]" + incrementRegisterFlag); break;
+					case 3: printToConsole("<strong>STR</strong>" + width + " " + srcRegister + ", [ " + region + " + " + baseRegister + " ]" + incrementRegisterFlag); break;
+					case 4: printToConsole("<strong>STR</strong>" + width + " " + srcRegister + ", [ " + region + " + #0x" + value + " ]" + incrementRegisterFlag); break;
+					case 5: printToConsole("<strong>STR</strong>" + width + " " + srcRegister + ", [ " + region + " + " + offsetRegister + " + #0x" + value + " ]" + incrementRegisterFlag); break;
+				}
+
+				if (offsetType == 2 || offsetType == 4 || offsetType == 5)
+					opcode += 2;
+				else
+					opcode += 1;
+				
+				continue;
+				
+			} else if (currOpcode.match(/(C|D|E|F)([0-9A-Fa-f]{7})/)) { // Extended-Width Instructions
+
+				if (currOpcode.match(/C0([0-9A-Fa-f]{6})/)) {
+					let width = parseInt(currOpcode[2], 16);
+					let condition = parseInt(currOpcode[3], 16);
+					let sourceRegister = "R" + currOpcode[4];
+					let operandType = parseInt(currOpcode[5], 16);
+
+					let region = parseInt(currOpcode[6], 16);
+					let addressRegister = "R" + currOpcode[6];
+					let otherRegister = "R" + currOpcode[6];
+					let relativeAddress = currOpcode[7] + code[opcode + 1];
+					let offsetRegister = "R" + currOpcode[7];
+					let value = (operandType == 4) ? (code[opcode + 1] + (width == 8 ? code[opcode + 2] : '')) : '';
+
+
+					switch (width) {
+						case 1: width = "B"; break;
+						case 2: width = "H"; break;
+						case 4: width = "W"; break;
+						case 8: width = "D"; break;
+						default: width = "?"; break;
+					}
+	
+					switch (region) {
+						case 0: region = "MAIN"; break;
+						case 1: region = "HEAP"; break;
+						default: region = "INVALID"; break;
+					}
+
+					switch (condition) {
+						case 1: condition = "GT "; break;
+						case 2:	condition = "GTE"; break;
+						case 3:	condition = "LT "; break;
+						case 4:	condition = "LTE"; break;
+						case 5:	condition = "EQ "; break;
+						case 6: condition = "NEQ"; break;
+						default: condition = "???"; break;
+					}
+
+					switch (operandType) {
+						case 0: printToConsole("<strong>CMP</strong>" + width + " " + condition + ", " + sourceRegister + ", [ " + region + " + 0x" + relativeAddress + " ]"); break;
+						case 1: printToConsole("<strong>CMP</strong>" + width + " " + condition + ", " + sourceRegister + ", [ " + region + offsetRegister + " ]"); break;
+						case 2: printToConsole("<strong>CMP</strong>" + width + " " + condition + ", " + sourceRegister + ", [ " + addressRegister + " + 0x" + relativeAddress + " ]"); break;
+						case 3: printToConsole("<strong>CMP</strong>" + width + " " + condition + ", " + sourceRegister + ", [ " + addressRegister + offsetRegister + " ]"); break;
+						case 4: printToConsole("<strong>CMP</strong>" + width + " " + condition + ", " + sourceRegister + ", #0x" + value); break;
+						case 5: printToConsole("<strong>CMP</strong>" + width + " " + condition + ", " + sourceRegister + ", " + otherRegister); break;
+						default:
+					}
+
+					console.log(operandType + " - " + width)
+
+					if (operandType == 0 || operandType == 2)
+						opcode += 2;
+					else if (operandType == 4)
+						opcode += (width == "D") ? 3 : 2;
 					else
 						opcode += 1;
 
@@ -722,22 +1079,26 @@
 	}
 
 	function getCode() {
-		return [
-			'{Master}',
-			'58000000 018A6210',
-			'78000000 0000243C',
-			'64000000 00000000 42700000',
-			'',
-            '[60 FPS]',
-            '58000000 018A6210',
-            '78000000 0000243C',
-            '64000000 00000000 42700000',
-            '',
-            '[30 FPS]',
-            '58000000 018A6210',
-            '78000000 0000243C',
-            '64000000 00000000 41F00000',
-		].join('\n');;
+		let editorContent = window.localStorage.getItem("editor_content");
+
+		if (editorContent == "" || editorContent == undefined)
+			return [
+				'{Master}',
+				'58000000 018A6210',
+				'78000000 0000243C',
+				'64000000 00000000 42700000',
+				'',
+				'[60 FPS]',
+				'58000000 018A6210',
+				'78000000 0000243C',
+				'64000000 00000000 42700000',
+				'',
+				'[30 FPS]',
+				'58000000 018A6210',
+				'78000000 0000243C',
+				'64000000 00000000 41F00000',
+			].join('\n');
+		else return editorContent;
 	}
 
 	var consoleInputField = window.parent.document.getElementById("console-input");
@@ -754,12 +1115,20 @@
 		}
 	});
 
+
 	function handleCommand(command) {
 		var model = monaco.editor.getModels()[0];
 		var args = command.split(" ");
 		args.shift();
 		
-		switch (command.split(" ")[0]) {
+		var registerRegexSet = new RegExp(/^R[0-9A-F]((=)|( =)|(= )|( = ))((((0x){1}[0-9A-Fa-f]+))|([0-9]+))$/g);
+		var memoryRegexSet = new RegExp(/^^((HEAP)|(MAIN)|(0x[0-9A-Fa-f]+)|([0-9]+)|( \+ )|( \- )|(\+)|(\-))+((=)|( =)|(= )|( = ))((((0x){1}[0-9A-Fa-f]+))|([0-9]+))$/g);
+		var registerRegexGet = new RegExp(/^R[0-9A-F]$/g);
+		var memoryRegexGet = new RegExp(/^^((HEAP)|(MAIN)|(0x[0-9A-Fa-f]+)|([0-9]+)|( \+ )|( \- )|(\+)|(\-))+$/g);
+
+		switch (command.trim().split(" ")[0]) {
+			case "":
+				break;
 			case "help":
 				printToConsole("<strong>EdiZon Cheat Emulator v1.0.0</strong>");
 				printToConsole("============================");
@@ -770,16 +1139,17 @@
 				printToConsole("<strong>edizon</strong>       -  Prints tool information");
 				printToConsole("<strong>exec &lt;id&gt;</strong>    -  Executes the cheat with the specified id");
 				printToConsole("<strong>disas &lt;id&gt;</strong>   -  Disassembles the cheat with the specified id");
-
+				printToConsole("<strong>get &lt;expression&gt;</strong> - Gets a value from a register or memory")
+				printToConsole("<strong>set &lt;expression&gt; = &lt;value&gt;</strong> - Sets a register or value in memory");
 				break;
 			case "clear":
 				clearConsole();
+				printToConsole("");
 				break;
 			case "edizon":
-				printToConsole("<font color='orange'>                                        </font>");
-				printToConsole("<font color='orange'>                ;;::::;;                </font><strong>EdiZon v4.0.0</strong>");
-				printToConsole("<font color='orange'>            ;:ldxkkkkkkxdoc;            </font><strong>by WerWolv</strong>");
-				printToConsole("<font color='orange'>          ;cdO000000000000Oxl;          </font>");
+				printToConsole("<font color='orange'>                ;;::::;;                </font>");
+				printToConsole("<font color='orange'>            ;:ldxkkkkkkxdoc;            </font><strong>EdiZon v4.0.0</strong>");
+				printToConsole("<font color='orange'>          ;cdO000000000000Oxl;          </font><strong>by WerWolv</strong>");
 				printToConsole("<font color='orange'>         ;oO0000000000000OOOOd:         </font>");
 				printToConsole("<font color='orange'>        ;oO000000000000OOOOOOOd;        </font>");
 				printToConsole("<font color='orange'>        cO0KXXKKXXKKKKKKKKKK0Okl        </font>");
@@ -788,12 +1158,12 @@
 				printToConsole("<font color='orange'>         ;lkOOOOOOkkkkkkkkkkxl;         </font>");
 				printToConsole("<font color='orange'>           :oxOkkkkkkkkkkkxo:           </font>");
 				printToConsole("<font color='orange'>             okkkkkkkkkkkkd;            </font>");
+				printToConsole("<font color='orange'>             okkkkkkkkkkkkd;            </font>");
 				printToConsole("<font color='orange'>             ;d0000000000x:             </font>");
 				printToConsole("<font color='black' >              lKNNNNNNNNXd;             </font>");
 				printToConsole("<font color='gray'  >               l0NXXXXXOl;              </font>");
 				printToConsole("<font color='gray'  >                cooooooc;               </font>");
 				printToConsole("<font color='gray'  >                  coc;                  </font>");
-				printToConsole("<font color='gray'  >                                        </font>");
 				break;
 			case "exec":
 				if (args.length != 1) {
@@ -810,6 +1180,44 @@
 				}
 
 				disassembleCheat(parseInt(args[0]), model);
+				break;
+			case "set":
+				
+				if (registerRegexSet.test(command.substring(4))) {
+					R[parseInt(args[0].substring(1))] = parseInt(args[args.length - 1]);
+					printToConsole("<strong>" + args[0] + "</strong> = " + R[parseInt(args[0].substring(1))]);
+				} else if (memoryRegexSet.test(command.substring(4))) {
+					var equalsPos = 0;
+					for (; equalsPos < command.length; equalsPos++)
+						if (command[equalsPos] == "=")
+							break;
+
+					command = command.substring(4, equalsPos);
+					command = command.replace("HEAP", "0x" + HEAP.toString(16));
+					command = command.replace("MAIN", "0x" + MAIN.toString(16));
+
+					memory[eval(command)] = parseInt(args[args.length - 1]);
+					printToConsole("<strong>" + command + "</strong> = " + memory[eval(command)]);
+				} else {
+					printToConsole("Usage: set &lt;mathematical expression&gt; = &lt;Value&gt;");
+					printToConsole("eg. set R0 = 0xFF");
+					printToConsole("eg. set HEAP + 0xFF1234 + 100 = 0xFF");
+				}
+				break;
+			case "get":
+				if (registerRegexGet.test(command.substring(4)))
+					printToConsole("<strong>" + args[0] + "</strong> = " + R[parseInt(args[0].substring(1))]);
+				else if (memoryRegexGet.test(command.substring(4))) {
+					command = command.substring(4, equalsPos);
+					command = command.replace("HEAP", "0x" + HEAP.toString(16));
+					command = command.replace("MAIN", "0x" + MAIN.toString(16));
+					
+					printToConsole("<strong>" + command + "</strong> = " + memory[eval(command)]);
+				} else {
+					printToConsole("Usage: get &lt;mathematical expression&gt;");
+					printToConsole("eg. get R0");
+					printToConsole("eg. get HEAP + 0xFF1234 + 100");
+				}
 				break;
 			default:
 				printToConsole(command.split(" ")[0] + ": command not found");
@@ -828,6 +1236,48 @@
 			}
 		}
 	};
+
+	window.ondragover = ev => {
+		ev.preventDefault();
+	};
+  
+	window.ondrop = ev => {
+		ev.preventDefault();
+  
+		if (ev.dataTransfer.items) {
+		  for (var i = 0; i < ev.dataTransfer.items.length; i++) {
+			if (ev.dataTransfer.items[i].kind === 'file') {
+			  var file = ev.dataTransfer.items[i].getAsFile();
+			  console.log('... file[' + i + '].name = ' + file.name);
+			  file.text().then(result => {
+				console.log(result);
+				
+				const lineCount = editor.getModels()[0].getLineCount();
+				console.log(lineCount);
+				const lastLineLength = editor.getModels()[0].getLineMaxColumn(lineCount);
+				console.log(lastLineLength)
+
+				const range = new monaco.Range(
+					1,
+					1,
+					lineCount,
+					lastLineLength
+				);
+
+				editor.executeEdits('', [
+					{ range: range, text: "Hello" }
+				]);
+
+			  });
+			}
+		  }
+		} else {
+		  for (var i = 0; i < ev.dataTransfer.files.length; i++) {
+			console.log('... file[' + i + '].name = ' + ev.dataTransfer.files[i].name);
+		  }
+		}
+  
+	  };
 
 </script>
 </body>

@@ -289,6 +289,7 @@ body {
     height: 100%;
 }
 
+
 .card:hover {
     transform: scale(1.05); /* (150% zoom - Note: if the zoom is too large, it will go outside of the viewport) */
 }
@@ -526,18 +527,6 @@ ul.CTAs a {
     overflow: scroll;
 }
 
-p {
-    white-space: pre;
-}
-
-pre {
-    text-align: left;
-    font-family: "Courier New";
-    color: lightgray;
-    font-size: 18;
-    margin: 0;
-    padding: 0;
-}
 
 [data-emoji] {
     font-style: normal;
